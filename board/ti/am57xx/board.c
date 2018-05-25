@@ -883,7 +883,8 @@ int spl_start_uboot(void)
 }
 #endif
 
-#ifdef CONFIG_USB_DWC3
+#if defined(CONFIG_USB_DWC3) && \
+    !(defined(CONFIG_DM_USB) && defined(CONFIG_DM_USB_DEV))
 static struct dwc3_device usb_otg_ss2 = {
 	.maximum_speed = USB_SPEED_HIGH,
 	.base = DRA7_USB_OTG_SS2_BASE,
@@ -912,9 +913,7 @@ int usb_gadget_handle_interrupts(int index)
 
 	return 0;
 }
-#endif /* CONFIG_USB_DWC3 */
 
-#if defined(CONFIG_USB_DWC3) || defined(CONFIG_USB_XHCI_OMAP)
 int board_usb_init(int index, enum usb_init_type init)
 {
 	enable_usb_clocks(index);
