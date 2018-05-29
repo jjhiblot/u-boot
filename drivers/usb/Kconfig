@@ -47,6 +47,12 @@ config DM_USB
 	  declared with the U_BOOT_USB_DEVICE() macro and will be
 	  automatically probed when found on the bus.
 
+config DM_USB_DEV
+	bool "Enable driver model for USB (Peripheral mode)"
+	depends on DM_USB
+	help
+	  Enable driver model for USB (Peripheral mode).
+
 source "drivers/usb/host/Kconfig"
 
 source "drivers/usb/dwc3/Kconfig"
