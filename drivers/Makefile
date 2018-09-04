@@ -45,6 +45,7 @@ obj-$(CONFIG_SPL_PCH_SUPPORT) += pch/
 obj-$(CONFIG_SPL_RTC_SUPPORT) += rtc/
 obj-$(CONFIG_SPL_MUSB_NEW_SUPPORT) += usb/musb-new/
 obj-$(CONFIG_SPL_USB_GADGET_SUPPORT) += usb/gadget/
+obj-$(CONFIG_SPL_USB_GADGET_SUPPORT) += usb/common/
 obj-$(CONFIG_SPL_USB_GADGET_SUPPORT) += usb/gadget/udc/
 obj-$(CONFIG_SPL_DFU_SUPPORT) += dfu/
 obj-$(CONFIG_SPL_WATCHDOG_SUPPORT) += watchdog/
