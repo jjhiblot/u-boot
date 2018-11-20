@@ -22,7 +22,7 @@
 #include <reset.h>
 #include <clk.h>
 
-#ifdef CONFIG_DM_USB_DEV
+#ifdef CONFIG_DM_USB_GADGET
 
 struct dwc3_generic_peripheral {
 	struct dwc3 dwc3;
@@ -224,7 +224,7 @@ static int dwc3_glue_bind(struct udevice *parent)
 		switch (dr_mode) {
 		case USB_DR_MODE_PERIPHERAL:
 		case USB_DR_MODE_OTG:
-#ifdef CONFIG_DM_USB_DEV
+#ifdef CONFIG_DM_USB_GADGET
 			debug("%s: dr_mode: OTG or Peripheral\n", __func__);
 			driver = "dwc3-generic-peripheral";
 #endif

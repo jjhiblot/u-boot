@@ -927,7 +927,7 @@ extern void usb_ep_autoconfig_reset(struct usb_gadget *);
 
 extern int usb_gadget_handle_interrupts(int index);
 
-#ifdef CONFIG_DM_USB_DEV
+#ifdef CONFIG_DM_USB_GADGET
 int usb_gadget_initialize(int index);
 int usb_gadget_release(int index);
 int dm_usb_gadget_handle_interrupts(struct udevice *dev);

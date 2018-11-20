@@ -875,7 +875,7 @@ int dwc3_shutdown_phy(struct udevice *dev, struct phy *usb_phys, int num_phys)
 }
 #endif
 
-#ifdef CONFIG_DM_USB_DEV
+#ifdef CONFIG_DM_USB_GADGET
 int dwc3_init(struct dwc3 *dwc)
 {
 	int ret;

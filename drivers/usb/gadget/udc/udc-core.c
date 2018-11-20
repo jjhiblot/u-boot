@@ -353,7 +353,7 @@ MODULE_DESCRIPTION("UDC Framework");
 MODULE_AUTHOR("Felipe Balbi <balbi@ti.com>");
 MODULE_LICENSE("GPL v2");
 
-#ifdef CONFIG_DM_USB_DEV
+#ifdef CONFIG_DM_USB_GADGET
 #define MAX_UDC_DEVICES 4
 static struct udevice *dev_array[MAX_UDC_DEVICES];
 int usb_gadget_initialize(int index)
