@@ -2,4 +2,8 @@
 #
 # USB peripheral controller drivers
 
+ifndef CONFIG_DM_USB_GADGET
 obj-$(CONFIG_USB_DWC3_GADGET)	+= udc-core.o
+endif
+
+obj-$(CONFIG_DM_USB_GADGET)	+= udc-uclass.o udc-core.o
