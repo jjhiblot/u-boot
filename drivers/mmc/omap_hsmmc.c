@@ -1861,8 +1861,7 @@ static int omap_hsmmc_ofdata_to_platdata(struct udevice *dev)
 }
 #endif
 
-#ifdef CONFIG_BLK
-
+#if CONFIG_IS_ENABLED(BLK)
 static int omap_hsmmc_bind(struct udevice *dev)
 {
 	struct omap_hsmmc_plat *plat = dev_get_platdata(dev);
@@ -1886,7 +1885,7 @@ static int omap_hsmmc_probe(struct udevice *dev)
 	priv->controller_flags = plat->controller_flags;
 	priv->hw_rev = plat->hw_rev;
 
-#ifdef CONFIG_BLK
+#if CONFIG_IS_ENABLED(BLK)
 	mmc = plat->mmc;
 #else
 	mmc = mmc_create(cfg, priv);
@@ -1947,7 +1946,7 @@ U_BOOT_DRIVER(omap_hsmmc) = {
 	.ofdata_to_platdata = omap_hsmmc_ofdata_to_platdata,
 	.platdata_auto_alloc_size = sizeof(struct omap_hsmmc_plat),
 #endif
-#ifdef CONFIG_BLK
+#if CONFIG_IS_ENABLED(BLK)
 	.bind = omap_hsmmc_bind,
 #endif
 	.ops = &omap_hsmmc_ops,
