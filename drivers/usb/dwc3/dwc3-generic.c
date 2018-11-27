@@ -244,9 +244,8 @@ static int dwc3_glue_bind(struct udevice *parent)
 		ret = device_bind_driver_to_node(parent, driver, name,
 						 offset_to_ofnode(node), &dev);
 		if (ret) {
-			debug("%s: not able to bind usb device mode\n",
-			      __func__);
-			return ret;
+			debug("%s: not able to bind %s to %s \n",
+			       __func__, name, driver);
 		}
 	}
 
