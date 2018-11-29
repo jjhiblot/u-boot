@@ -931,6 +931,7 @@ config ARCH_ZYNQMP_R5
 	select DM_SERIAL
 	select OF_CONTROL
 	imply CMD_DM
+	imply DM_USB_GADGET
 
 config ARCH_ZYNQMP
 	bool "Xilinx ZynqMP based platform"
@@ -947,6 +948,7 @@ config ARCH_ZYNQMP
 	imply CMD_DM
 	imply FAT_WRITE
 	imply MP
+	imply DM_USB_GADGET
 
 config TEGRA
 	bool "NVIDIA Tegra"
