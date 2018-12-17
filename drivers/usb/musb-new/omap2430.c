@@ -203,7 +203,7 @@ static int omap2430_musb_ofdata_to_platdata(struct udevice *dev)
 	return 0;
 }
 
-#ifdef CONFIG_USB_MUSB_HOST
+#ifndef CONFIG_USB_MUSB_GADGET
 static int omap2430_musb_probe(struct udevice *dev)
 {
 	struct musb_host_data *host = dev_get_priv(dev);
@@ -241,7 +241,7 @@ static int omap2430_musb_remove(struct udevice *dev)
 #if CONFIG_IS_ENABLED(OF_CONTROL)
 static int omap2430_musb_host_ofdata_to_platdata(struct udevice *dev)
 {
-	struct ti_musb_platdata *platdata = dev_get_platdata(dev);
+	struct omap2430_musb_platdata *platdata = dev_get_platdata(dev);
 	const void *fdt = gd->fdt_blob;
 	int node = dev_of_offset(dev);
 	int ret;
@@ -272,6 +272,83 @@ U_BOOT_DRIVER(omap2430_musb) = {
 	.priv_auto_alloc_size = sizeof(struct musb_host_data),
 };
 
+#else
+
+struct omap2430_musb_peripheral {
+	struct musb *periph;
+};
+
+#if CONFIG_IS_ENABLED(OF_CONTROL)
+static int omap2430_musb_peripheral_ofdata_to_platdata(struct udevice *dev)
+{
+	struct ti_musb_platdata *platdata = dev_get_platdata(dev);
+	const void *fdt = gd->fdt_blob;
+	int node = dev_of_offset(dev);
+	int ret;
+
+	ret = omap2430_musb_ofdata_to_platdata(dev);
+	if (ret) {
+		pr_err("platdata dt parse error\n");
+		return ret;
+	}
+	platdata->plat.mode = MUSB_PERIPHERAL;
+
+	return 0;
+}
+#endif
+
+int dm_usb_gadget_handle_interrupts(struct udevice *dev)
+{
+	struct omap2430_musb_peripheral *priv = dev_get_priv(dev);
+
+	priv->periph->isr(0, priv->periph);
+
+	return 0;
+}
+
+static int omap2430_musb_peripheral_probe(struct udevice *dev)
+{
+	struct omap2430_musb_peripheral *priv = dev_get_priv(dev);
+	struct omap2430_musb_platdata *platdata = dev_get_platdata(dev);
+	struct omap_musb_board_data *otg_board_data;
+	int ret;
+
+	otg_board_data = &platdata->otg_board_data;
+	priv->periph = musb_init_controller(&platdata->plat,
+					    (struct device *)otg_board_data,
+					    platdata->base);
+	if (!priv->periph)
+		return -EIO;
+
+	/* ti_musb_set_phy_power(dev, 1); */
+	musb_gadget_setup(priv->periph);
+	return usb_add_gadget_udc((struct device *)dev, &priv->periph->g);
+}
+
+static int omap2430_musb_peripheral_remove(struct udevice *dev)
+{
+	struct omap2430_musb_peripheral *priv = dev_get_priv(dev);
+
+	usb_del_gadget_udc(&priv->periph->g);
+	/* ti_musb_set_phy_power(dev, 0); */
+
+	return 0;
+}
+
+U_BOOT_DRIVER(omap2430_musb_peripheral) = {
+	.name	= "ti-musb-peripheral",
+	.id	= UCLASS_USB_GADGET_GENERIC,
+	.of_match = omap2430_musb_ids,
+#if CONFIG_IS_ENABLED(OF_CONTROL)
+	.ofdata_to_platdata = omap2430_musb_peripheral_ofdata_to_platdata,
+#endif
+	.probe = omap2430_musb_peripheral_probe,
+	.remove = omap2430_musb_peripheral_remove,
+	.ops	= &musb_usb_ops,
+	.platdata_auto_alloc_size = sizeof(struct omap2430_musb_platdata),
+	.priv_auto_alloc_size = sizeof(struct omap2430_musb_peripheral),
+	.flags = DM_FLAG_PRE_RELOC,
+};
 #endif
 
 #endif /* CONFIG_IS_ENABLED(DM_USB) */
