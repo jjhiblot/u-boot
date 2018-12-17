@@ -137,6 +137,12 @@ const struct musb_platform_ops omap2430_ops = {
 
 #if CONFIG_IS_ENABLED(DM_USB)
 
+static const struct udevice_id omap2430_musb_ids[] = {
+	{ .compatible = "ti,omap3-musb" },
+	{ .compatible = "ti,omap4-musb" },
+	{ }
+};
+
 struct omap2430_musb_platdata {
 	void *base;
 	void *ctrl_mod_base;
@@ -190,20 +196,6 @@ static int omap2430_musb_ofdata_to_platdata(struct udevice *dev)
 		return -ENOENT;
 	}
 
-#if 0 /* In a perfect world, mode would be set to OTG, mode 3 from DT */
-	platdata->plat.mode = fdtdec_get_int(fdt, node,
-										"mode", -1);
-	if (platdata->plat.mode < 0) {
-		pr_err("MUSB mode DT entry missing\n");
-		return -ENOENT;
-	}
-#else /* MUSB_OTG, it doesn't work */
-#ifdef CONFIG_USB_MUSB_HOST /* Host seems to be the only option that works */
-	platdata->plat.mode = MUSB_HOST;
-#else /* For that matter, MUSB_PERIPHERAL doesn't either */
-	platdata->plat.mode = MUSB_PERIPHERAL;
-#endif
-#endif
 	platdata->otg_board_data.dev = dev;
 	platdata->plat.config = &platdata->musb_config;
 	platdata->plat.platform_ops = &omap2430_ops;
@@ -211,11 +203,10 @@ static int omap2430_musb_ofdata_to_platdata(struct udevice *dev)
 	return 0;
 }
 
+#ifdef CONFIG_USB_MUSB_HOST
 static int omap2430_musb_probe(struct udevice *dev)
 {
-#ifdef CONFIG_USB_MUSB_HOST
 	struct musb_host_data *host = dev_get_priv(dev);
-#endif
 	struct omap2430_musb_platdata *platdata = dev_get_platdata(dev);
 	struct usb_bus_priv *priv = dev_get_uclass_priv(dev);
 	struct omap_musb_board_data *otg_board_data;
@@ -226,7 +217,6 @@ static int omap2430_musb_probe(struct udevice *dev)
 
 	otg_board_data = &platdata->otg_board_data;
 
-#ifdef CONFIG_USB_MUSB_HOST
 	host->host = musb_init_controller(&platdata->plat,
 					  (struct device *)otg_board_data,
 					  platdata->base);
@@ -235,11 +225,7 @@ static int omap2430_musb_probe(struct udevice *dev)
 	}
 
 	ret = musb_lowlevel_init(host);
-#else
-	ret = musb_register(&platdata->plat,
-			  (struct device *)otg_board_data,
-			  platdata->base);
-#endif
+
 	return ret;
 }
 
@@ -252,28 +238,40 @@ static int omap2430_musb_remove(struct udevice *dev)
 	return 0;
 }
 
-static const struct udevice_id omap2430_musb_ids[] = {
-	{ .compatible = "ti,omap3-musb" },
-	{ .compatible = "ti,omap4-musb" },
-	{ }
-};
+#if CONFIG_IS_ENABLED(OF_CONTROL)
+static int omap2430_musb_host_ofdata_to_platdata(struct udevice *dev)
+{
+	struct ti_musb_platdata *platdata = dev_get_platdata(dev);
+	const void *fdt = gd->fdt_blob;
+	int node = dev_of_offset(dev);
+	int ret;
+
+	ret = omap2430_musb_ofdata_to_platdata(dev);
+	if (ret) {
+		pr_err("platdata dt parse error\n");
+		return ret;
+	}
+
+	platdata->plat.mode = MUSB_HOST;
+
+	return 0;
+}
+#endif
 
 U_BOOT_DRIVER(omap2430_musb) = {
 	.name	= "omap2430-musb",
-#ifdef CONFIG_USB_MUSB_HOST
 	.id		= UCLASS_USB,
-#else
-	.id		= UCLASS_USB_GADGET_GENERIC,
-#endif
 	.of_match = omap2430_musb_ids,
-	.ofdata_to_platdata = omap2430_musb_ofdata_to_platdata,
+#if CONFIG_IS_ENABLED(OF_CONTROL)
+	.ofdata_to_platdata = omap2430_musb_host_ofdata_to_platdata,
+#endif
 	.probe = omap2430_musb_probe,
 	.remove = omap2430_musb_remove,
-#ifdef CONFIG_USB_MUSB_HOST
 	.ops = &musb_usb_ops,
-#endif
 	.platdata_auto_alloc_size = sizeof(struct omap2430_musb_platdata),
 	.priv_auto_alloc_size = sizeof(struct musb_host_data),
 };
+
+#endif
 
 #endif /* CONFIG_IS_ENABLED(DM_USB) */
