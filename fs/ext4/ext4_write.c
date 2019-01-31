@@ -858,12 +858,19 @@ int ext4fs_write(const char *fname, unsigned char *buffer,
 
 	g_parent_inode = zalloc(fs->inodesz);
 	if (!g_parent_inode)
-		goto fail;
+		goto fail_ext4fs_init;
 
 	if (ext4fs_init() != 0) {
 		printf("error in File System init\n");
-		return -1;
+		goto fail_ext4fs_init;
 	}
+
+	if (le32_to_cpu(fs->sb->feature_ro_compat) &
+		EXT4_FEATURE_RO_COMPAT_METADATA_CSUM) {
+		printf("u-boot doesn't support updating the metadata checksums yet\n");
+		goto fail;
+	}
+
 	inodes_per_block = fs->blksz / fs->inodesz;
 	parent_inodeno = ext4fs_get_parent_inode_num(fname, filename, F_FILE);
 	if (parent_inodeno == -1)
@@ -990,6 +997,7 @@ int ext4fs_write(const char *fname, unsigned char *buffer,
 	return 0;
 fail:
 	ext4fs_deinit();
+fail_ext4fs_init:
 	free(inode_buffer);
 	free(g_parent_inode);
 	free(temp_ptr);
