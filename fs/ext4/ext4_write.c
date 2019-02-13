@@ -829,7 +829,7 @@ static int ext4fs_write_file(struct ext2_inode *file_inode,
 	return len;
 }
 
-int ext4fs_write(const char *fname, const char *buffer,
+static int ext4fs_write(const char *fname, const char *buffer,
 		 unsigned long sizebytes)
 {
 	int ret = 0;
