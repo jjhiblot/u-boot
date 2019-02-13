@@ -38,6 +38,7 @@ static int env_ext4_save(void)
 	disk_partition_t info;
 	int dev, part;
 	int err;
+	loff_t written;
 
 	err = env_export(&env_new);
 	if (err)
@@ -59,8 +60,8 @@ static int env_ext4_save(void)
 		return 1;
 	}
 
-	err = ext4fs_write(CONFIG_ENV_EXT4_FILE, (void *)&env_new,
-			   sizeof(env_t));
+	err = ext4_write_file(CONFIG_ENV_EXT4_FILE, (void *)&env_new, 0,
+			   sizeof(env_t), &written);
 	ext4fs_close();
 
 	if (err == -1) {
