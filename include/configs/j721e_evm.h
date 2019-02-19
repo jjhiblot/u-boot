@@ -12,6 +12,7 @@
 #include <linux/sizes.h>
 #include <config_distro_bootcmd.h>
 #include <environment/ti/mmc.h>
+#include <environment/ti/k3_dfu.h>
 
 #define CONFIG_ENV_SIZE			(128 << 10)
 
@@ -87,11 +88,18 @@
 	"get_kern_mmc=load mmc ${bootpart} ${loadaddr} "		\
 		"${bootdir}/${name_kern}\0"
 
+/* set default dfu_bufsiz to 128KB (sector size of OSPI) */
+#define DFUARGS \
+	"dfu_bufsiz=0x20000\0" \
+	DFU_ALT_INFO_MMC \
+	DFU_ALT_INFO_EMMC
+
 /* Incorporate settings into the U-Boot environment */
 #define CONFIG_EXTRA_ENV_SETTINGS					\
 	DEFAULT_MMC_TI_ARGS						\
 	EXTRA_ENV_J721E_BOARD_SETTINGS					\
-	EXTRA_ENV_J721E_BOARD_SETTINGS_MMC
+	EXTRA_ENV_J721E_BOARD_SETTINGS_MMC				\
+	DFUARGS
 
 /* Now for the remaining common defines */
 #include <configs/ti_armv7_common.h>

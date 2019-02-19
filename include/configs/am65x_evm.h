@@ -12,6 +12,7 @@
 #include <linux/sizes.h>
 #include <config_distro_bootcmd.h>
 #include <environment/ti/mmc.h>
+#include <environment/ti/k3_dfu.h>
 
 #define CONFIG_ENV_SIZE			(128 << 10)
 
@@ -98,12 +99,18 @@
 		"${bootdir}/${name_fit}\0"				\
 	"partitions=" PARTS_DEFAULT
 
+#define DFUARGS \
+	"dfu_bufsiz=0x20000\0" \
+	DFU_ALT_INFO_MMC \
+	DFU_ALT_INFO_EMMC
+
 /* Incorporate settings into the U-Boot environment */
 #define CONFIG_EXTRA_ENV_SETTINGS					\
 	DEFAULT_MMC_TI_ARGS						\
 	DEFAULT_FIT_TI_ARGS						\
 	EXTRA_ENV_AM65X_BOARD_SETTINGS					\
-	EXTRA_ENV_AM65X_BOARD_SETTINGS_MMC
+	EXTRA_ENV_AM65X_BOARD_SETTINGS_MMC				\
+	DFUARGS
 
 /* MMC ENV related defines */
 #ifdef CONFIG_ENV_IS_IN_MMC
