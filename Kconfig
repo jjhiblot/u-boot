@@ -398,6 +398,16 @@ config SPL_LOAD_FIT
 	  particular it can handle selecting from multiple device tree
 	  and passing the correct one to U-Boot.
 
+config SPL_LOAD_FIT_APPLY_OVERLAY
+	bool "Enable SPL applying DT overlays from FIT"
+	depends on SPL_LOAD_FIT
+	select OF_LIBFDT_OVERLAY
+	default n
+	help
+	  The device tree is loaded from the FIT image. Allow the SPL is to
+	  also load device-tree overlays from the FIT image an apply them
+	  over the device tree.
+
 config SPL_LOAD_FIT_FULL
 	bool "Enable SPL loading U-Boot as a FIT"
 	select SPL_FIT
