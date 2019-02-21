@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <fpga.h>
 #include <image.h>
+#include <malloc.h>
 #include <linux/libfdt.h>
 #include <spl.h>
 
@@ -289,6 +290,48 @@ static int spl_load_fit_image(struct spl_load_info *info, ulong sector,
 	return 0;
 }
 
+#if defined(CONFIG_OF_LIBFDT_OVERLAY)
+static int load_and_apply_overlay(void *fdt_addr, struct spl_load_info *info,
+				  ulong sector, void *fit, ulong base_offset,
+				  int node)
+{
+	int ret;
+	struct spl_image_info img_info;
+
+	/* get the size of the image */
+	ret = spl_load_fit_image(info, sector, fit, base_offset, node,
+				 &img_info, true);
+	if (ret < 0)
+		return ret;
+
+	/* allocate space to load the image */
+	img_info.load_addr = (ulong)malloc(img_info.size);
+	if (!img_info.load_addr)
+		return -ENOMEM;
+
+	/* load the image */
+	ret = spl_load_fit_image(info, sector, fit, base_offset, node,
+				 &img_info, false);
+	if (ret < 0)
+		return ret;
+
+	/* Increase the size of the fdt before applying the dtbo */
+	fdt_shrink_to_minimum(fdt_addr, img_info.size);
+
+	/* apply the DTB overlay */
+	ret = fdt_overlay_apply_verbose(fdt_addr, (void *)img_info.load_addr);
+	free((void *)img_info.load_addr);
+	if (ret) {
+		pr_err("Could not apply overlay %s\n",
+		       fit_get_name(fit, node, NULL));
+		return ret;
+	}
+	debug("DT overlay %s applied\n", fit_get_name(fit, node, NULL));
+
+	return 0;
+}
+#endif
+
 static int spl_fit_append_fdt(struct spl_image_info *spl_image,
 			      struct spl_load_info *info, ulong sector,
 			      void *fit, int images, ulong base_offset)
@@ -316,11 +359,26 @@ static int spl_fit_append_fdt(struct spl_image_info *spl_image,
 
 	/* Make the load-address of the FDT available for the SPL framework */
 	spl_image->fdt_addr = (void *)image_info.load_addr;
+#if defined(CONFIG_OF_LIBFDT_OVERLAY)
+	int index;
+
+	/* Apply overlays located in the "fdt" property (after the DTB) */
+	for (index = 1; ; index++) {
+		node = spl_fit_get_image_node(fit, images, FIT_FDT_PROP, index);
+		if (node < 0) {
+			debug("%s: No additional FDT node\n", __func__);
+			break;
+		}
+		ret = load_and_apply_overlay(spl_image->fdt_addr, info, sector,
+					     fit, base_offset, node);
+		if (ret)
+			return ret;
+	}
+#endif
 #if !CONFIG_IS_ENABLED(FIT_IMAGE_TINY)
 	/* Try to make space, so we can inject details on the loadables */
 	ret = fdt_shrink_to_minimum(spl_image->fdt_addr, 8192);
 #endif
-
 	return ret;
 }
 
