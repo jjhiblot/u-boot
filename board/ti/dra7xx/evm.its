@@ -1,0 +1,48 @@
+/dts-v1/;
+
+/ {
+	description = "Firmware image with one or more FDT blobs";
+	#address-cells = <0x1>;
+
+	images {
+
+		firmware-1 {
+			description = "U-Boot 2019.01 for DRA76 board";
+                        type = "firmware";
+                        arch = "arm";
+                        os = "u-boot";
+                        compression = "none";
+                        load = <0x80800000>;
+                        entry = <0x0>;
+			data = /incbin/("u-boot-nodtb.bin");
+
+		};
+
+		fdt-1 {
+			description = "dra76-evm";
+			type = "fdt";
+			data = /incbin/("arch/arm/dts/dra76-evm.dtb");
+		};
+
+		dra76-evm-dummy {
+			description = "dra76-evm dummy overlay 1";
+			data = /incbin/("arch/arm/dts/dra76-evm-dummy.dtbo");
+		};
+
+		dra76-evm-dummy2 {
+			description = "dra76-evm dummy overlay 2";
+			data = /incbin/("arch/arm/dts/dra76-evm-dummy2.dtbo");
+		};
+	};
+
+	configurations {
+		default = "dra76-evm";
+
+                dra76-evm {
+                        description = "dra76-evm";
+                        firmware = "firmware-1";
+                        fdt = "fdt-1";
+                };
+
+	};
+};

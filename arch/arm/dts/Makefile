@@ -276,7 +276,7 @@ dtb-$(CONFIG_ARCH_SOCFPGA) +=				\
 	socfpga_stratix10_socdk.dtb
 
 dtb-$(CONFIG_TARGET_DRA7XX_EVM) += dra72-evm.dtb dra7-evm.dtb	\
-	dra72-evm-revc.dtb dra71-evm.dtb dra76-evm.dtb
+	dra72-evm-revc.dtb dra71-evm.dtb dra76-evm.dtb dra76-evm-dummy.dtbo dra76-evm-dummy2.dtbo
 dtb-$(CONFIG_TARGET_AM57XX_EVM) += am57xx-beagle-x15.dtb \
 	am57xx-beagle-x15-revb1.dtb \
 	am57xx-beagle-x15-revc.dtb \

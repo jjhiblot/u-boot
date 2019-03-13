@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2019 Texas Instruments Incorporated - http://www.ti.com/
+ */
+
+/dts-v1/;
+/plugin/;
+
+
+&mmc1 {
+	dummy_node {
+		dummy_val = "this is only in overlay 1";
+	};
+};

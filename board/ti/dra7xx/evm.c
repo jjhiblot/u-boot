@@ -704,6 +704,14 @@ int board_late_init(void)
 	if (device_okay("/ocp/omap_dwc3_2@488c0000"))
 		enable_usb_clocks(1);
 #endif
+	char preboot_cmd[255];
+
+	sprintf(preboot_cmd, "fdt addr %p;\
+		fdt print /ocp/mmc@480b4000/dummy_node;\
+		fdt print /ocp/mmc@4809c000/dummy_node;",
+		gd->fdt_blob);
+
+	env_set("preboot", preboot_cmd);
 	return 0;
 }
 
@@ -1069,6 +1077,28 @@ int ft_board_setup(void *blob, bd_t *bd)
 #endif
 
 #ifdef CONFIG_SPL_LOAD_FIT
+#define MAX_DAUGHTER_BOARDS 2
+const bool detected[MAX_DAUGHTER_BOARDS] = {false, true};
+const char *dtbo_nodes[] = {"dra76-evm-dummy", "dra76-evm-dummy2"};
+
+const char *board_fit_get_additionnal_images(int index, const char *type)
+{
+	int i, j;
+
+	if (strcmp(type, FIT_FDT_PROP))
+		return NULL;
+
+	j = 0;
+	for (i = 0; i < MAX_DAUGHTER_BOARDS; i++) {
+		if (detected[i]) {
+			if (j == index)
+				return dtbo_nodes[i];
+			j++;
+		}
+	}
+	return NULL;
+}
+
 int board_fit_config_name_match(const char *name)
 {
 	if (is_dra72x()) {
