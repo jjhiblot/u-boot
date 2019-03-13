@@ -164,12 +164,15 @@ static int get_aligned_image_size(struct spl_load_info *info, int data_size,
  *		If the FIT node does not contain a "load" (address) property,
  *		the image gets loaded to the address pointed to by the
  *		load_addr member in this struct.
+ * @no_load:	If true, the data is not loaded from the medium. Used to get
+ *		the size of the data in the case of a dynamic allocation of
+ *		the memory.
  *
  * Return:	0 on success or a negative error number.
  */
 static int spl_load_fit_image(struct spl_load_info *info, ulong sector,
 			      void *fit, ulong base_offset, int node,
-			      struct spl_image_info *image_info)
+			      struct spl_image_info *image_info, bool no_load)
 {
 	int offset;
 	size_t length;
@@ -216,7 +219,20 @@ static int spl_load_fit_image(struct spl_load_info *info, ulong sector,
 
 		load_ptr = (load_addr + align_len) & ~align_len;
 		length = len;
+	} else {
+		/* Embedded data */
+		if (fit_image_get_data(fit, node, &data, &length)) {
+			puts("Cannot get image data/size\n");
+			return -ENOENT;
+		}
+	}
 
+	if (no_load && image_info) {
+		image_info->size = length;
+		return 0;
+	}
+
+	if (external_data) {
 		overhead = get_aligned_image_overhead(info, offset);
 		nr_sectors = get_aligned_image_size(info, length, offset);
 
@@ -293,7 +309,7 @@ static int spl_fit_append_fdt(struct spl_image_info *spl_image,
 	 */
 	image_info.load_addr = spl_image->load_addr + spl_image->size;
 	ret = spl_load_fit_image(info, sector, fit, base_offset, node,
-				 &image_info);
+				 &image_info, false);
 
 	if (ret < 0)
 		return ret;
@@ -401,7 +417,7 @@ int spl_load_simple_fit(struct spl_image_info *spl_image,
 	if (node >= 0) {
 		/* Load the image and set up the spl_image structure */
 		ret = spl_load_fit_image(info, sector, fit, base_offset, node,
-					 spl_image);
+					 spl_image, false);
 		if (ret) {
 			printf("%s: Cannot load the FPGA: %i\n", __func__, ret);
 			return ret;
@@ -453,7 +469,7 @@ int spl_load_simple_fit(struct spl_image_info *spl_image,
 
 	/* Load the image and set up the spl_image structure */
 	ret = spl_load_fit_image(info, sector, fit, base_offset, node,
-				 spl_image);
+				 spl_image, false);
 	if (ret)
 		return ret;
 
@@ -485,7 +501,7 @@ int spl_load_simple_fit(struct spl_image_info *spl_image,
 			break;
 
 		ret = spl_load_fit_image(info, sector, fit, base_offset, node,
-					 &image_info);
+					 &image_info, false);
 		if (ret < 0)
 			continue;
 
