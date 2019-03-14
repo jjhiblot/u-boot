@@ -25,6 +25,12 @@ __weak ulong board_spl_fit_size_align(ulong size)
 	return size;
 }
 
+__weak int board_fit_get_additionnal_images(int index, const char *type,
+					    const char **name)
+{
+	return -ENOENT;
+}
+
 /**
  * spl_fit_get_image_name(): By using the matching configuration subnode,
  * retrieve the name of an image, specified by a property name and an index
@@ -368,6 +374,28 @@ static int spl_fit_append_fdt(struct spl_image_info *spl_image,
 		if (node < 0) {
 			debug("%s: No additional FDT node\n", __func__);
 			break;
+		}
+		ret = load_and_apply_overlay(spl_image->fdt_addr, info, sector,
+					     fit, base_offset, node);
+		if (ret)
+			return ret;
+	}
+
+	/* Apply overlays, the name of which are provided by board-level code */
+	for (index = 0; ; index++) {
+		const char *str;
+
+		ret = board_fit_get_additionnal_images(index, FIT_FDT_PROP,
+						       &str);
+		if (ret)
+			break;
+		if (!str)
+			continue;
+
+		node = fdt_subnode_offset(fit, images, str);
+		if (node < 0) {
+			pr_err("cannot find image node '%s': %d\n", str, node);
+			continue;
 		}
 		ret = load_and_apply_overlay(spl_image->fdt_addr, info, sector,
 					     fit, base_offset, node);

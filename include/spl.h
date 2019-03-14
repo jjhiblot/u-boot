@@ -371,6 +371,26 @@ void board_spl_fit_post_load(ulong load_addr, size_t length);
 ulong board_spl_fit_size_align(ulong size);
 
 /**
+ * board_fit_get_additionnal_images - Get additional image names from board-
+ *				      level code.
+ * This function can be used to provide the image names based on runtime
+ * detection. A classic use-case would when DTBOs are used to describe
+ * additionnal daughter cards.
+ *
+ * @param index	Index of the image. Starts at 0 and gets incremented after each
+ *		call to this function.
+ * @param type	The type of image. For example, "fdt" for DTBs
+ * @param name	Output. The name of the node describing the image. If  NULL, it
+ *		should be ignored by the caller but it does not indicate that
+ *		there no more images to get from this function.
+ *
+ * @return 0 if there are still images to get of this type to get from
+ *	   this function. Otherwise error code.
+ */
+int board_fit_get_additionnal_images(int index, const char *type,
+				     const char **name);
+
+/**
  * spl_perform_fixups() - arch/board-specific callback before processing
  *                        the boot-payload
  */
