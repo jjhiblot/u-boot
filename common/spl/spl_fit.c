@@ -6,6 +6,7 @@
 
 #include <common.h>
 #include <errno.h>
+#include <board.h>
 #include <fpga.h>
 #include <gzip.h>
 #include <image.h>
@@ -48,10 +49,12 @@ static int spl_fit_get_image_name(const void *fit, int images,
 				  const char *type, int index,
 				  const char **outname)
 {
+	struct udevice *board;
 	const char *name, *str;
 	__maybe_unused int node;
 	int conf_node;
 	int len, i;
+	bool found = true;
 
 	conf_node = fit_find_config_node(fit);
 	if (conf_node < 0) {
@@ -77,12 +80,30 @@ static int spl_fit_get_image_name(const void *fit, int images,
 	for (i = 0; i < index; i++) {
 		str = strchr(str, '\0') + 1;
 		if (!str || (str - name >= len)) {
-			debug("no string for index %d\n", index);
-			return -E2BIG;
+			found = false;
+			break;
 		}
 	}
 
-	*outname = (char *)str;
+	if (!found && !board_get(&board)) {
+		int rc;
+		/*
+		 * no string in the property for this index. Check if the board
+		 * level code can supply one.
+		 */
+		rc = board_get_fit_loadable(board, index - i - 1, type, &str);
+		if (rc && rc != -ENOENT)
+			return rc;
+		if (!rc)
+			found = true;
+	}
+
+	if (!found) {
+		debug("no string for index %d\n", index);
+		return -E2BIG;
+	}
+
+	*outname = str;
 	return 0;
 }
 
