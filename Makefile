@@ -893,7 +893,8 @@ cmd_mkimage = $(objtree)/tools/mkimage $(MKIMAGEFLAGS_$(@F)) -d $< $@ \
 	>$(MKIMAGEOUTPUT) $(if $(KBUILD_VERBOSE:0=), && cat $(MKIMAGEOUTPUT))
 
 quiet_cmd_mkfitimage = MKIMAGE $@
-cmd_mkfitimage = $(objtree)/tools/mkimage $(MKIMAGEFLAGS_$(@F)) -f $(U_BOOT_ITS) -E -p $(CONFIG_FIT_EXTERNAL_OFFSET) $@\
+cmd_mkfitimage = $(objtree)/tools/mkimage $(MKIMAGEFLAGS_$(@F)) -D "-i $(obj) -i $(src)"\
+	-f $(U_BOOT_ITS) -E $@ -p $(CONFIG_FIT_EXTERNAL_OFFSET)\
 	>$(MKIMAGEOUTPUT) $(if $(KBUILD_VERBOSE:0=), && cat $(MKIMAGEOUTPUT))
 
 quiet_cmd_cat = CAT     $@
@@ -1151,7 +1152,7 @@ endif
 # Boards with more complex image requirments can provide an .its source file
 # or a generator script
 ifneq ($(CONFIG_SPL_FIT_SOURCE),"")
-U_BOOT_ITS = $(subst ",,$(CONFIG_SPL_FIT_SOURCE))
+U_BOOT_ITS = $(src)/$(subst ",,$(CONFIG_SPL_FIT_SOURCE))
 else
 ifneq ($(CONFIG_SPL_FIT_GENERATOR),"")
 U_BOOT_ITS := u-boot.its
