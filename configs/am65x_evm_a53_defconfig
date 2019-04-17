@@ -16,6 +16,7 @@ CONFIG_SPL_LIBDISK_SUPPORT=y
 CONFIG_DISTRO_DEFAULTS=y
 # CONFIG_SYS_MALLOC_CLEAR_ON_INIT is not set
 CONFIG_SPL_LOAD_FIT=y
+CONFIG_SPL_FIT_GENERATOR="arch/arm/mach-k3/make_fit.py"
 CONFIG_OF_BOARD_SETUP=y
 CONFIG_BOOTCOMMAND="run findfdt; run envboot; run init_${boot}; run get_kern_${boot}; run get_fdt_${boot}; run get_overlay_${boot}; run run_kern"
 # CONFIG_DISPLAY_CPUINFO is not set
@@ -42,6 +43,7 @@ CONFIG_CMD_TIME=y
 CONFIG_OF_CONTROL=y
 CONFIG_SPL_OF_CONTROL=y
 CONFIG_DEFAULT_DEVICE_TREE="k3-am654-base-board"
+CONFIG_OF_OVERLAY_LIST="k3-am654-gp k3-am654-idk k3-am654-pcie-usb2 k3-am654-pcie-usb3 k3-am654-evm-oldi-lcd1evm"
 CONFIG_SPL_MULTI_DTB_FIT=y
 CONFIG_SPL_MULTI_DTB_FIT_NO_COMPRESSION=y
 CONFIG_ENV_IS_IN_MMC=y
