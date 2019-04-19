@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: GPL-2.0
+/**
+ * DT overlay for IDK application board on AM654 EVM
+ *
+ * Copyright (C) 2018 Texas Instruments Incorporated - http://www.ti.com/
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+   fragment@101 {
+	target-path = "/";
+
+	__overlay__ {
+		dummy_node {
+			dumm_property;
+		};
+	};
+   };
+};
