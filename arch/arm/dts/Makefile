@@ -831,4 +831,4 @@ PHONY += dtbs
 dtbs: $(addprefix $(obj)/, $(dtb-y))
 	@:
 
-clean-files := *.dtb *_HS
+clean-files := *.dtb *_HS *.dtbo
