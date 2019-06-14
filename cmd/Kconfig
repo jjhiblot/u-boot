@@ -537,7 +537,7 @@ config CMD_MEMINFO
 	  Display memory information.
 
 config CMD_MEMORY
-	bool "md, mm, nm, mw, cp, cmp, base, loop"
+	bool "md, mm, nm, mw, cp, cmp, base, loop, random"
 	default y
 	help
 	  Memory commands.
@@ -549,6 +549,7 @@ config CMD_MEMORY
 	    cmp - memory compare
 	    base - print or set address offset
 	    loop - initialize loop on address range
+	    random - fill memory with random data
 
 config CMD_MEMTEST
 	bool "memtest"
