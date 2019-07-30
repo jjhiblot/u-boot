@@ -163,6 +163,10 @@ def unpack_elf(filename):
             segments.append((index, e_entry, p_paddr, p_data))
     return segments
 
+def show_deps_and_exit():
+	print("u-boot")
+	sys.exit(0)
+
 def main():
     uboot_elf = "./u-boot"
     fit_its = sys.stdout
@@ -177,6 +181,9 @@ def main():
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
         logging.warning(' BL31 file bl31.elf NOT found, resulting binary is non-functional')
         logging.warning(' Please read Building section in doc/README.rockchip')
+
+    if sys.argv[1] == "--deps":
+	    show_deps_and_exit()
 
     opts, args = getopt.getopt(sys.argv[1:], "o:u:b:h")
     for opt, val in opts:
