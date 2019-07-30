@@ -11,6 +11,12 @@
 #
 # usage: $0 <dt_name> [<dt_name> [<dt_name] ...]
 
+
+if [ x"$1" = x"--deps" ]; then
+	echo "u-boot.dtb"
+	exit 0
+fi
+
 [ -z "$BL31" ] && BL31="bl31.bin"
 
 if [ ! -f $BL31 ]; then

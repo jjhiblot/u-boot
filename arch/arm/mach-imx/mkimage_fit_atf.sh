@@ -11,6 +11,11 @@
 [ -z "$ATF_LOAD_ADDR" ] && ATF_LOAD_ADDR="0x00910000"
 [ -z "$BL33_LOAD_ADDR" ] && BL33_LOAD_ADDR="0x40200000"
 
+
+if [ x"$1" = x"--deps" ]; then
+	exit 0
+fi
+
 if [ ! -f $BL31 ]; then
 	echo "ERROR: BL31 file $BL31 NOT found" >&2
 	exit 0
