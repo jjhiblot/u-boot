@@ -23,6 +23,17 @@ int board_detect(struct udevice *dev)
 	return ops->detect(dev);
 }
 
+const char *board_get_fit_loadable(struct udevice *dev, int index,
+				   const char *type)
+{
+	struct board_ops *ops = board_get_ops(dev);
+
+	if (!ops->get_fit_loadable)
+		return NULL;
+
+	return ops->get_fit_loadable(dev, index, type);
+}
+
 int board_get_bool(struct udevice *dev, int id, bool *val)
 {
 	struct board_ops *ops = board_get_ops(dev);
