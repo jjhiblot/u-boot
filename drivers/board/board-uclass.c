@@ -54,6 +54,16 @@ int board_get_int(struct udevice *dev, int id, int *val)
 	return ops->get_int(dev, id, val);
 }
 
+int board_get_mac_addr(struct udevice *dev, int id, u8 mac[ETH_ALEN])
+{
+	struct board_ops *ops = board_get_ops(dev);
+
+	if (!ops->get_mac_addr)
+		return -ENOSYS;
+
+	return ops->get_mac_addr(dev, id, mac);
+}
+
 int board_get_str(struct udevice *dev, int id, size_t size, char *val)
 {
 	struct board_ops *ops = board_get_ops(dev);

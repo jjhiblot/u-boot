@@ -98,6 +98,17 @@ struct board_ops {
 	 */
 	int (*get_fit_loadable)(struct udevice *dev, int index,
 				const char *type, const char **strp);
+
+	/**
+	 * get_mac_addr - Get the nth MAC address of the board
+	 *
+	 * @dev:	The board instance to gather the data.
+	 * @id:		A unique identifier for the MAC address to be read.
+	 * @mac:	output. Filled with the nth mac address
+	 *
+	 * Return:	0 if OK, -ve on error.
+	 */
+	int (*get_mac_addr)(struct udevice *dev, int id, u8 mac[ETH_ALEN]);
 };
 
 #define board_get_ops(dev)	((struct board_ops *)(dev)->driver->ops)
@@ -176,6 +187,17 @@ int board_get(struct udevice **devp);
 int board_get_fit_loadable(struct udevice *dev, int index,
 			   const char *type, const char **strp);
 
+/**
+ * board_get_mac_addr - Get the nth MAC address of the board
+ *
+ * @dev:	The board instance to gather the data.
+ * @id:		A unique identifier for the MAC address to be read.
+ * @mac:	output. Filled with the nth mac address
+ *
+ * Return: 0 if OK, -ve on error.
+ */
+int board_get_mac_addr(struct udevice *dev, int id, u8 mac[ETH_ALEN]);
+
 #else
 
 static inline int board_detect(struct udevice *dev)
@@ -206,6 +228,12 @@ static inline int board_get(struct udevice **devp)
 
 static inline int board_get_fit_loadable(struct udevice *dev, int index,
 					 const char *type, const char **strp)
+{
+	return -ENOSYS;
+}
+
+static inline int board_get_mac_addr(struct udevice *dev, int id,
+				     u8 mac[ETH_ALEN])
 {
 	return -ENOSYS;
 }
