@@ -8,6 +8,7 @@
  */
 
 #include <common.h>
+#include <board.h>
 #include <dm.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/hardware.h>
@@ -17,22 +18,8 @@
 #include <env.h>
 #include <spl.h>
 #include <asm/arch/sys_proto.h>
+#include "../../../drivers/board/ti/ti-board.h"
 
-#include "../common/board_detect.h"
-
-#define board_is_am65x_base_board()	board_ti_is("AM6-COMPROCEVM")
-
-/* Daughter card presence detection signals */
-enum {
-	AM65X_EVM_APP_BRD_DET,
-	AM65X_EVM_LCD_BRD_DET,
-	AM65X_EVM_SERDES_BRD_DET,
-	AM65X_EVM_HDMI_GPMC_BRD_DET,
-	AM65X_EVM_BRD_DET_COUNT,
-};
-
-/* Max number of MAC addresses that are parsed/processed per daughter card */
-#define DAUGHTER_CARD_NO_OF_MAC_ADDR	8
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -114,235 +101,138 @@ int ft_board_setup(void *blob, bd_t *bd)
 }
 #endif
 
-int do_board_detect(void)
-{
-	int ret;
-
-	ret = ti_i2c_eeprom_am6_get_base(CONFIG_EEPROM_BUS_ADDRESS,
-					 CONFIG_EEPROM_CHIP_ADDRESS);
-	if (ret)
-		pr_err("Reading on-board EEPROM at 0x%02x failed %d\n",
-		       CONFIG_EEPROM_CHIP_ADDRESS, ret);
-
-	return ret;
-}
-
 int checkboard(void)
 {
-	struct ti_am6_eeprom *ep = TI_AM6_EEPROM_DATA;
+	/* default value when EEPROM not populated */
+	char name[20] =  "AM6-COMPROCEVM";
+	char version[20] = "E3";
+	struct udevice *board;
 
-	if (do_board_detect())
-		/* EEPROM not populated */
-		printf("Board: %s rev %s\n", "AM6-COMPROCEVM", "E3");
-	else
-		printf("Board: %s rev %s\n", ep->name, ep->version);
+	board_get(&board);
+	if (board_detect(board)) {
+		board_get_str(board, STR_NAME, sizeof(name), name);
+		board_get_str(board, STR_VERSION, sizeof(version), version);
+	}
+
+	printf("Board: %s rev %s\n", name, version);
 
 	return 0;
 }
 
-static void setup_board_eeprom_env(void)
+#ifdef CONFIG_SPL_BUILD
+void spl_board_init(void)
 {
-	char *name = "am65x";
+	struct udevice *board;
 
-	if (do_board_detect())
-		goto invalid_eeprom;
+	/*
+	 * We ned to detect the daughter cards before the SPL loads
+	 * the dtb overlays from the FIT image
+	 */
+	if (!board_get(&board))
+		board_detect(board);
+}
+#else
+static void set_single_env_str(struct udevice *board, const char *env, int id)
+{
+	char s[20];
 
-	if (board_is_am65x_base_board())
-		name = "am65x";
+	if (!board_get_str(board, id, sizeof(s), s))
+		env_set(env, s);
 	else
-		printf("Unidentified board claims %s in eeprom header\n",
-		       board_ti_get_name());
-
-invalid_eeprom:
-	set_board_info_env_am6(name);
+		env_set(env, "unknown");
 }
 
-static int init_daughtercard_det_gpio(char *gpio_name, struct gpio_desc *desc)
+void setup_board_eeprom_env(struct udevice *board, const char *name)
 {
-	int ret;
+	if (name)
+		env_set("board_name", name);
+	else
+		set_single_env_str(board, "board_name", STR_NAME);
 
-	memset(desc, 0, sizeof(*desc));
-
-	ret = dm_gpio_lookup_name(gpio_name, desc);
-	if (ret < 0)
-		return ret;
-
-	/* Request GPIO, simply re-using the name as label */
-	ret = dm_gpio_request(desc, gpio_name);
-	if (ret < 0)
-		return ret;
-
-	return dm_gpio_set_dir_flags(desc, GPIOD_IS_IN);
+	set_single_env_str(board, "board_rev", STR_VERSION);
+	set_single_env_str(board, "board_software_revision", STR_SW_REV);
+	set_single_env_str(board, "board_serial", STR_SERIAL);
 }
 
-static int probe_daughtercards(void)
+static void setup_mac_addresses(struct udevice *b)
 {
-	struct ti_am6_eeprom ep;
-	struct gpio_desc board_det_gpios[AM65X_EVM_BRD_DET_COUNT];
-	char mac_addr[DAUGHTER_CARD_NO_OF_MAC_ADDR][TI_EEPROM_HDR_ETH_ALEN];
-	u8 mac_addr_cnt;
-	char name_overlays[1024] = { 0 };
-	int i, j;
-	int ret;
+	int card, j, rc;
+	u8 mac[ETH_ALEN];
+	int macbase = 0;
 
-	/*
-	 * Daughter card presence detection signal name to GPIO (via I2C I/O
-	 * expander @ address 0x38) name and EEPROM I2C address mapping.
-	 */
-	const struct {
-		char *gpio_name;
-		u8 i2c_addr;
-	} slot_map[AM65X_EVM_BRD_DET_COUNT] = {
-		{ "gpio@38_0", 0x52, },	/* AM65X_EVM_APP_BRD_DET */
-		{ "gpio@38_1", 0x55, },	/* AM65X_EVM_LCD_BRD_DET */
-		{ "gpio@38_2", 0x54, },	/* AM65X_EVM_SERDES_BRD_DET */
-		{ "gpio@38_3", 0x53, },	/* AM65X_EVM_HDMI_GPMC_BRD_DET */
-	};
-
-	/* Declaration of daughtercards to probe */
-	const struct {
-		u8 slot_index;		/* Slot the card is installed */
-		char *card_name;	/* EEPROM-programmed card name */
-		char *dtbo_name;	/* Device tree overlay to apply */
-		u8 eth_offset;		/* ethXaddr MAC address index offset */
-	} cards[] = {
-		{
-			AM65X_EVM_APP_BRD_DET,
-			"AM6-GPAPPEVM",
-			"k3-am654-gp.dtbo",
-			0,
-		},
-		{
-			AM65X_EVM_APP_BRD_DET,
-			"AM6-IDKAPPEVM",
-			"k3-am654-idk.dtbo",
-			3,
-		},
-		{
-			AM65X_EVM_SERDES_BRD_DET,
-			"SER-PCIE2LEVM",
-			"k3-am654-pcie-usb2.dtbo",
-			0,
-		},
-		{
-			AM65X_EVM_SERDES_BRD_DET,
-			"SER-PCIEUSBEVM",
-			"k3-am654-pcie-usb3.dtbo",
-			0,
-		},
-		{
-			AM65X_EVM_LCD_BRD_DET,
-			"OLDI-LCD1EVM",
-			"k3-am654-evm-oldi-lcd1evm.dtbo",
-			0,
-		},
-	};
-
-	/*
-	 * Initialize GPIO used for daughtercard slot presence detection and
-	 * keep the resulting handles in local array for easier access.
-	 */
-	for (i = 0; i < AM65X_EVM_BRD_DET_COUNT; i++) {
-		ret = init_daughtercard_det_gpio(slot_map[i].gpio_name,
-						 &board_det_gpios[i]);
-		if (ret < 0)
-			return ret;
-	}
-
-	for (i = 0; i < ARRAY_SIZE(cards); i++) {
-		/* Obtain card-specific slot index and associated I2C address */
-		u8 slot_index = cards[i].slot_index;
-		u8 i2c_addr = slot_map[slot_index].i2c_addr;
-
-		/*
-		 * The presence detection signal is active-low, hence skip
-		 * over this card slot if anything other than 0 is returned.
-		 */
-		ret = dm_gpio_get_value(&board_det_gpios[slot_index]);
-		if (ret < 0)
-			return ret;
-		else if (ret)
-			continue;
-
-		/* Get and parse the daughter card EEPROM record */
-		ret = ti_i2c_eeprom_am6_get(CONFIG_EEPROM_BUS_ADDRESS, i2c_addr,
-					    &ep,
-					    (char **)mac_addr,
-					    DAUGHTER_CARD_NO_OF_MAC_ADDR,
-					    &mac_addr_cnt);
-		if (ret) {
-			pr_err("Reading daughtercard EEPROM at 0x%02x failed %d\n",
-			       i2c_addr, ret);
+	for (card = 0; ; card++) {
+		rc = board_get_int(b, CARD_ID(card, INT_ETH_OFFSET),
+				   &macbase);
+		if (rc == -ENODATA && card == 0) {
 			/*
-			 * Even this is pretty serious let's just skip over
-			 * this particular daughtercard, rather than ending
-			 * the probing process altogether.
-			 */
-			continue;
+			* The first MAC address for ethernet a.k.a.
+			* ethernet0 comes from efuse populated via the
+			* am654 gigabit eth switch subsystem driver.
+			*/
+			macbase = 1;
+		} else if (rc < 0) {
+			break;
 		}
 
-		/* Only process the parsed data if we found a match */
-		if (strncmp(ep.name, cards[i].card_name, sizeof(ep.name)))
-			continue;
-
-		printf("Detected: %s rev %s\n", ep.name, ep.version);
-
-		/*
-		 * Populate any MAC addresses from daughtercard into the U-Boot
-		 * environment, starting with a card-specific offset so we can
-		 * have multiple cards contribute to the MAC pool in a well-
-		 * defined manner.
-		 */
-		for (j = 0; j < mac_addr_cnt; j++) {
-			if (!is_valid_ethaddr((u8 *)mac_addr[j]))
-				continue;
-
-			eth_env_set_enetaddr_by_index("eth",
-						      cards[i].eth_offset + j,
-						      (uchar *)mac_addr[j]);
-		}
-
-		/* Skip if no overlays are to be added */
-		if (!strlen(cards[i].dtbo_name))
-			continue;
-
-		/*
-		 * Make sure we are not running out of buffer space by checking
-		 * if we can fit the new overlay, a trailing space to be used
-		 * as a separator, plus the terminating zero.
-		 */
-		if (strlen(name_overlays) + strlen(cards[i].dtbo_name) + 2 >
-		    sizeof(name_overlays))
-			return -ENOMEM;
-
-		/* Append to our list of overlays */
-		strcat(name_overlays, cards[i].dtbo_name);
-		strcat(name_overlays, " ");
+		for (j = 0; !board_get_mac_addr(b, CARD_ID(card, j), mac); j++)
+			if (is_valid_ethaddr((u8 *)mac))
+				eth_env_set_enetaddr_by_index("eth",
+							      macbase + j,
+							      mac);
 	}
+}
 
-	/* Apply device tree overlay(s) to the U-Boot environment, if any */
-	if (strlen(name_overlays))
-		return env_set("name_overlays", name_overlays);
+static int setup_overlays_env(struct udevice *board)
+{
+	int i;
+	const char suffix[] = ".dtbo ";
+	char name_overlays[1024] = { 0 };
+	char *p = name_overlays;
+	int remaining_sz = sizeof(name_overlays) - 1;
+	const char *s = NULL;
+
+	for (i = 0; !board_get_fit_loadable(board, i, FIT_FDT_PROP, &s); i++) {
+		int l = strlen(s) + sizeof(suffix);
+
+		if (l < remaining_sz) {
+			strcpy(p, s);
+			strcat(p, suffix);
+			remaining_sz -= l;
+			p += l;
+		} else {
+			pr_err("no room to add %s to name_overlays\n", s);
+			return -ENOMEM;
+		}
+	}
+	if (s)
+		env_set("name_overlays", name_overlays);
 
 	return 0;
 }
 
 int board_late_init(void)
 {
-	struct ti_am6_eeprom *ep = TI_AM6_EEPROM_DATA;
+	struct udevice *board;
+	int ret;
 
-	setup_board_eeprom_env();
+	ret = board_get(&board);
+	if (ret) {
+		pr_warn("Cannot find board device\n");
+		goto end;
+	}
 
-	/*
-	 * The first MAC address for ethernet a.k.a. ethernet0 comes from
-	 * efuse populated via the am654 gigabit eth switch subsystem driver.
-	 * All the other ones are populated via EEPROM, hence continue with
-	 * an index of 1.
-	 */
-	board_ti_am6_set_ethaddr(1, ep->mac_addr_cnt);
+	ret = board_detect(board);
+	if (ret) {
+		pr_warn("Board detection failed\n");
+		goto end;
+	}
 
-	/* Check for and probe any plugged-in daughtercards */
-	probe_daughtercards();
+	setup_board_eeprom_env(board, "am65x");
+	setup_mac_addresses(board);
+	setup_overlays_env(board);
 
+end:
 	return 0;
+
 }
+#endif

@@ -113,9 +113,6 @@ void board_init_f(ulong dummy)
 	preloader_console_init();
 #endif
 
-	/* Perform EEPROM-based board detection */
-	do_board_detect();
-
 #ifdef CONFIG_K3_AM654_DDRSS
 	ret = uclass_get_device(UCLASS_RAM, 0, &dev);
 	if (ret)
