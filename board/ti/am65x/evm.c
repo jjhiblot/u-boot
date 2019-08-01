@@ -8,6 +8,7 @@
  */
 
 #include <common.h>
+#include <board.h>
 #include <dm.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/hardware.h>
@@ -321,4 +322,11 @@ int board_late_init(void)
 	probe_daughtercards();
 
 	return 0;
+}
+
+void spl_board_init(void)
+{
+	struct udevice *board;
+	if (!board_get(&board))
+		board_detect(board);
 }
