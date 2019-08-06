@@ -73,3 +73,13 @@
 &main_sdhci1 {
 	u-boot,dm-spl;
 };
+
+&usbss0 {
+	u-boot,dm-spl;
+	ti,usb2-only;
+};
+
+&usb0 {
+	dr_mode = "peripheral";
+	u-boot,dm-spl;
+};
