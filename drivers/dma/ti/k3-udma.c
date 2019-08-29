@@ -1145,16 +1145,16 @@ static int udma_setup_resources(struct udma_dev *ud)
 	ud->rchan_cnt = (cap2 >> 18) & 0x1ff;
 	ch_count  = ud->tchan_cnt + ud->rchan_cnt;
 
-	ud->tchan_map = devm_kmaloc_array(dev, BITS_TO_LONGS(ud->tchan_cnt),
-					  sizeof(unsigned long), GFP_KERNEL);
+	ud->tchan_map = devm_kmalloc_array(dev, BITS_TO_LONGS(ud->tchan_cnt),
+					   sizeof(unsigned long), GFP_KERNEL);
 	ud->tchans = devm_kcalloc(dev, ud->tchan_cnt, sizeof(*ud->tchans),
 				  GFP_KERNEL);
-	ud->rchan_map = devm_kmaloc_array(dev, BITS_TO_LONGS(ud->rchan_cnt),
-					  sizeof(unsigned long), GFP_KERNEL);
+	ud->rchan_map = devm_kmalloc_array(dev, BITS_TO_LONGS(ud->rchan_cnt),
+					   sizeof(unsigned long), GFP_KERNEL);
 	ud->rchans = devm_kcalloc(dev, ud->rchan_cnt, sizeof(*ud->rchans),
 				  GFP_KERNEL);
-	ud->rflow_map = devm_kmaloc_array(dev, BITS_TO_LONGS(ud->rflow_cnt),
-					  sizeof(unsigned long), GFP_KERNEL);
+	ud->rflow_map = devm_kmalloc_array(dev, BITS_TO_LONGS(ud->rflow_cnt),
+					   sizeof(unsigned long), GFP_KERNEL);
 	ud->rflow_map_reserved = devm_kcalloc(dev, BITS_TO_LONGS(ud->rflow_cnt),
 					      sizeof(unsigned long),
 					      GFP_KERNEL);
