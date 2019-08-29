@@ -22,3 +22,4 @@ obj-$(CONFIG_OMAP_USB2_PHY) += omap-usb2-phy.o
 obj-$(CONFIG_KEYSTONE_USB_PHY) += keystone-usb-phy.o
 
 obj-y += cadence/
+obj-y += ti/

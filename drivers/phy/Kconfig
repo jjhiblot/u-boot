@@ -182,5 +182,6 @@ config KEYSTONE_USB_PHY
 	  This PHY is found on some Keystone (K2) devices supporting USB.
 
 source "drivers/phy/cadence/Kconfig"
+source "drivers/phy/ti/Kconfig"
 
 endmenu
