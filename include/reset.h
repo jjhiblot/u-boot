@@ -6,6 +6,7 @@
 #ifndef _RESET_H
 #define _RESET_H
 
+#include <dm.h>
 #include <linux/errno.h>
 
 /**
@@ -80,6 +81,98 @@ struct reset_ctl_bulk {
 };
 
 #if CONFIG_IS_ENABLED(DM_RESET)
+
+/**
+ * devm_reset_control_get - resource managed reset_get_by_name()
+ * @dev: device to be reset by the controller
+ * @id: reset line name
+ *
+ * Managed reset_get_by_name(). For reset controllers returned
+ * from this function, reset_free() is called automatically on driver
+ * detach.
+ *
+ * Returns a struct reset_ctl or IS_ERR() condition containing errno.
+ */
+struct reset_ctl *devm_reset_control_get(struct udevice *dev, const char *id);
+
+/**
+ * devm_reset_control_get_optional - resource managed reset_get_by_name() that
+ *                                   can fail
+ * @dev:	The client device.
+ * @id:		reset line name
+ *
+ * Managed reset_get_by_name(). For reset controllers returned
+ * from this function, reset_free() is called automatically on driver
+ * detach.
+ *
+ * Returns a struct reset_ctl or a dummy reset controller if it failed.
+ */
+struct reset_ctl *devm_reset_control_get_optional(struct udevice *dev,
+						  const char *id);
+
+/**
+ * devm_reset_control_get - resource managed reset_get_by_index()
+ * @dev:	The client device.
+ * @index:	The index of the reset signal to request, within the client's
+ *		list of reset signals.
+ *
+ * Managed reset_get_by_index(). For reset controllers returned
+ * from this function, reset_free() is called automatically on driver
+ * detach.
+ *
+ * Returns a struct reset_ctl or IS_ERR() condition containing errno.
+ */
+struct reset_ctl *devm_reset_control_get_by_index(struct udevice *dev,
+						  int index);
+
+/**
+ * devm_reset_bulk_get - resource managed reset_get_bulk()
+ * @dev: device to be reset by the controller
+ *
+ * Managed reset_get_bulk(). For reset controllers returned
+ * from this function, reset_free() is called automatically on driver
+ * detach.
+ *
+ * Returns a struct reset_ctl or IS_ERR() condition containing errno.
+ */
+struct reset_ctl_bulk *devm_reset_bulk_get(struct udevice *dev);
+
+/**
+ * devm_reset_bulk_get_optional - resource managed reset_get_bulk() that
+ *                                can fail
+ * @dev:	The client device.
+ *
+ * Managed reset_get_bulk(). For reset controllers returned
+ * from this function, reset_free() is called automatically on driver
+ * detach.
+ *
+ * Returns a struct reset_ctl or NULL if it failed.
+ */
+struct reset_ctl_bulk *devm_reset_bulk_get_optional(struct udevice *dev);
+
+/**
+ * devm_reset_bulk_get_by_node - resource managed reset_get_bulk()
+ * @dev: device to be reset by the controller
+ * @node: ofnode where the "resets" property is. Usually a sub-node of
+ *        the dev's node.
+ *
+ * see devm_reset_bulk_get()
+ */
+struct reset_ctl_bulk *devm_reset_bulk_get_by_node(struct udevice *dev,
+						   ofnode node);
+
+/**
+ * devm_reset_bulk_get_optional_by_node - resource managed reset_get_bulk()
+ *                                        that can fail
+ * @dev: device to be reset by the controller
+ * @node: ofnode where the "resets" property is. Usually a sub-node of
+ *        the dev's node.
+ *
+ * see devm_reset_bulk_get_optional()
+ */
+struct reset_ctl_bulk *devm_reset_bulk_get_optional_by_node(struct udevice *dev,
+							    ofnode node);
+
 /**
  * reset_get_by_index - Get/request a reset signal by integer index.
  *
@@ -98,6 +191,24 @@ struct reset_ctl_bulk {
  */
 int reset_get_by_index(struct udevice *dev, int index,
 		       struct reset_ctl *reset_ctl);
+
+/**
+ * of_reset_get_by_index - Get/request a reset signal by integer index.
+ *
+ * This looks up and requests a reset signal. The index is relative to the
+ * client device; each device is assumed to have n reset signals associated
+ * with it somehow, and this function finds and requests one of them. The
+ * mapping of client device reset signal indices to provider reset signals may
+ * be via device-tree properties, board-provided mapping tables, or some other
+ * mechanism.
+ *
+ * @node	The OF node of the client device.
+ * @index:	The index of the reset signal to request, within the client's
+ *		list of reset signals.
+ * @reset_ctl	A pointer to a reset control struct to initialize.
+ * @return 0 if OK, or a negative error code.
+ */
+int of_reset_get_by_index(ofnode node, int index, struct reset_ctl *reset_ctl);
 
 /**
  * reset_get_bulk - Get/request all reset signals of a device.
@@ -246,7 +357,48 @@ static inline int reset_release_bulk(struct reset_ctl_bulk *bulk)
 {
 	return reset_release_all(bulk->resets, bulk->count);
 }
+
 #else
+static inline struct reset_ctl *devm_reset_control_get(struct udevice *dev,
+						       const char *id)
+{
+	return ERR_PTR(-ENOTSUPP);
+}
+
+static inline struct reset_ctl *devm_reset_control_get_optional(struct udevice *dev,
+								const char *id)
+{
+	return NULL;
+}
+
+static inline struct reset_ctl *devm_reset_control_get_by_index(struct udevice *dev,
+								int index)
+{
+	return ERR_PTR(-ENOTSUPP);
+}
+
+static inline struct reset_ctl_bulk *devm_reset_bulk_get(struct udevice *dev)
+{
+	return ERR_PTR(-ENOTSUPP);
+}
+
+static inline struct reset_ctl_bulk *devm_reset_bulk_get_optional(struct udevice *dev)
+{
+	return NULL;
+}
+
+static inline struct reset_ctl_bulk *devm_reset_bulk_get_by_node(struct udevice *dev,
+								 ofnode node)
+{
+	return ERR_PTR(-ENOTSUPP);
+}
+
+static inline struct reset_ctl_bulk *devm_reset_bulk_get_optional_by_node(struct udevice *dev,
+									  ofnode node)
+{
+	return NULL;
+}
+
 static inline int reset_get_by_index(struct udevice *dev, int index,
 				     struct reset_ctl *reset_ctl)
 {
