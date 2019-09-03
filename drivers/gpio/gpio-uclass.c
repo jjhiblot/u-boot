@@ -18,6 +18,33 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+/*
+ * This descriptor validation needs to be inserted verbatim into each
+ * function taking a descriptor, so we need to use a preprocessor
+ * macro to avoid endless duplication. If the desc is NULL it is an
+ * optional GPIO and calls should just bail out.
+ */
+static int validate_desc(const struct gpio_desc *desc, const char *func)
+{
+	if (!desc)
+		return 0;
+	if (IS_ERR(desc)) {
+		pr_warn("%s: invalid GPIO (errorpointer)\n", func);
+		return PTR_ERR(desc);
+	}
+	if (!desc->dev) {
+		pr_warn("%s: invalid GPIO (no device)\n", func);
+		return -EINVAL;
+	}
+	return 1;
+}
+
+#define VALIDATE_DESC(desc) do { \
+	int __valid = validate_desc(desc, __func__); \
+	if (__valid <= 0) \
+		return __valid; \
+	} while (0)
+
 /**
  * gpio_to_device() - Convert global GPIO number to device, number
  *
@@ -269,10 +296,13 @@ int gpio_hog_lookup_name(const char *name, struct gpio_desc **desc)
 
 int dm_gpio_request(struct gpio_desc *desc, const char *label)
 {
-	struct udevice *dev = desc->dev;
+	struct udevice *dev;
 	struct gpio_dev_priv *uc_priv;
 	char *str;
 	int ret;
+
+	VALIDATE_DESC(desc);
+	dev = desc->dev;
 
 	uc_priv = dev_get_uclass_priv(dev);
 	if (uc_priv->name[desc->offset])
@@ -400,6 +430,8 @@ static int check_reserved(const struct gpio_desc *desc, const char *func)
 {
 	struct gpio_dev_priv *uc_priv;
 
+	VALIDATE_DESC(desc);
+
 	if (!dm_gpio_is_valid(desc))
 		return -ENOENT;
 
@@ -468,6 +500,8 @@ int dm_gpio_get_value(const struct gpio_desc *desc)
 	int value;
 	int ret;
 
+	VALIDATE_DESC(desc);
+
 	ret = check_reserved(desc, "get_value");
 	if (ret)
 		return ret;
@@ -481,6 +515,8 @@ int dm_gpio_set_value(const struct gpio_desc *desc, int value)
 {
 	int ret;
 
+	VALIDATE_DESC(desc);
+
 	ret = check_reserved(desc, "set_value");
 	if (ret)
 		return ret;
@@ -493,8 +529,11 @@ int dm_gpio_set_value(const struct gpio_desc *desc, int value)
 
 int dm_gpio_get_open_drain(struct gpio_desc *desc)
 {
-	struct dm_gpio_ops *ops = gpio_get_ops(desc->dev);
+	struct dm_gpio_ops *ops;
 	int ret;
+
+	VALIDATE_DESC(desc);
+	ops = gpio_get_ops(desc->dev);
 
 	ret = check_reserved(desc, "get_open_drain");
 	if (ret)
@@ -508,8 +547,11 @@ int dm_gpio_get_open_drain(struct gpio_desc *desc)
 
 int dm_gpio_set_open_drain(struct gpio_desc *desc, int value)
 {
-	struct dm_gpio_ops *ops = gpio_get_ops(desc->dev);
+	struct dm_gpio_ops *ops;
 	int ret;
+
+	VALIDATE_DESC(desc);
+	ops = gpio_get_ops(desc->dev);
 
 	ret = check_reserved(desc, "set_open_drain");
 	if (ret)
@@ -525,9 +567,13 @@ int dm_gpio_set_open_drain(struct gpio_desc *desc, int value)
 
 int dm_gpio_set_dir_flags(struct gpio_desc *desc, ulong flags)
 {
-	struct udevice *dev = desc->dev;
-	struct dm_gpio_ops *ops = gpio_get_ops(dev);
+	struct udevice *dev;
+	struct dm_gpio_ops *ops;
 	int ret;
+
+	VALIDATE_DESC(desc);
+	dev = desc->dev;
+	ops = gpio_get_ops(dev);
 
 	ret = check_reserved(desc, "set_dir");
 	if (ret)
@@ -570,7 +616,6 @@ int dm_gpio_set_dir(struct gpio_desc *desc)
 int gpio_get_value(unsigned gpio)
 {
 	int ret;
-
 	struct gpio_desc desc;
 
 	ret = gpio_to_device(gpio, &desc);
@@ -933,6 +978,8 @@ int gpio_get_list_count(struct udevice *dev, const char *list_name)
 
 int dm_gpio_free(struct udevice *dev, struct gpio_desc *desc)
 {
+	VALIDATE_DESC(desc);
+
 	/* For now, we don't do any checking of dev */
 	return _dm_gpio_free(desc->dev, desc->offset);
 }
@@ -981,12 +1028,11 @@ static int gpio_renumber(struct udevice *removed_dev)
 
 int gpio_get_number(const struct gpio_desc *desc)
 {
-	struct udevice *dev = desc->dev;
 	struct gpio_dev_priv *uc_priv;
 
-	if (!dev)
-		return -1;
-	uc_priv = dev->uclass_priv;
+	VALIDATE_DESC(desc);
+
+	uc_priv = dev_get_uclass_priv(desc->dev);
 
 	return uc_priv->gpio_base + desc->offset;
 }
