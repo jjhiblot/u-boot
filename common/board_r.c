@@ -32,6 +32,7 @@
 #include <miiphy.h>
 #endif
 #include <mmc.h>
+#include <mux.h>
 #include <nand.h>
 #include <of_live.h>
 #include <onenand_uboot.h>
@@ -310,6 +311,7 @@ static int initr_dm(void)
 	if (ret)
 		return ret;
 #endif
+	dm_mux_init();
 
 	return 0;
 }
