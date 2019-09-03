@@ -11,6 +11,7 @@
 #include <linux/compiler.h>
 #include <linux/types.h>
 #include <linux/usb/otg.h>
+#include <generic-phy.h>
 
 #ifndef __LINUX_CDNS3_CORE_H
 #define __LINUX_CDNS3_CORE_H
@@ -86,8 +87,8 @@ struct cdns3 {
 	struct cdns3_role_driver	*roles[USB_ROLE_DEVICE + 1];
 	enum usb_role			role;
 	struct cdns3_device		*gadget_dev;
-	struct phy			*usb2_phy;
-	struct phy			*usb3_phy;
+	struct phy			usb2_phy;
+	struct phy			usb3_phy;
 	/* mutext used in workqueue*/
 	struct mutex			mutex;
 	enum usb_dr_mode		dr_mode;

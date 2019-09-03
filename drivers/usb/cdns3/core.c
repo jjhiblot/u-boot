@@ -19,7 +19,6 @@
 #include <linux/io.h>
 #include <usb.h>
 #include <usb/xhci.h>
-
 #include "core.h"
 #include "host-export.h"
 #include "gadget-export.h"
@@ -251,6 +250,8 @@ static int cdns3_idle_role_start(struct cdns3 *cdns)
 
 static void cdns3_idle_role_stop(struct cdns3 *cdns)
 {
+	/* Program Lane swap and bring PHY out of RESET */
+	generic_phy_reset(&cdns->usb3_phy);
 }
 
 static int cdns3_idle_init(struct cdns3 *cdns)
@@ -326,6 +327,30 @@ static int cdns3_probe(struct cdns3 *cdns)
 
 	mutex_init(&cdns->mutex);
 
+	ret = generic_phy_get_by_name(dev, "cdns3,usb2-phy", &cdns->usb2_phy);
+	if (ret)
+		dev_warn(dev, "Unable to get USB2 phy (ret %d)\n", ret);
+
+	ret = generic_phy_init(&cdns->usb2_phy);
+	if (ret)
+		return ret;
+
+	ret = generic_phy_get_by_name(dev, "cdns3,usb3-phy", &cdns->usb3_phy);
+	if (ret)
+		dev_warn(dev, "Unable to get USB3 phy (ret %d)\n", ret);
+
+	ret = generic_phy_init(&cdns->usb3_phy);
+	if (ret)
+		return ret;
+
+	ret = generic_phy_power_on(&cdns->usb2_phy);
+	if (ret)
+		return ret;
+
+	ret = generic_phy_power_on(&cdns->usb3_phy);
+	if (ret)
+		return ret;
+
 	ret = cdns3_drd_init(cdns);
 	if (ret)
 		return ret;
@@ -342,7 +367,10 @@ static int cdns3_probe(struct cdns3 *cdns)
 static int cdns3_remove(struct cdns3 *cdns)
 {
 	cdns3_exit_roles(cdns);
-
+	generic_phy_power_off(&cdns->usb2_phy);
+	generic_phy_power_off(&cdns->usb3_phy);
+	generic_phy_exit(&cdns->usb2_phy);
+	generic_phy_exit(&cdns->usb3_phy);
 	return 0;
 }
 
