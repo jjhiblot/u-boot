@@ -124,6 +124,8 @@ struct phy_ops {
 
 #ifdef CONFIG_PHY
 
+extern struct phy_ops nop_phy_ops;
+
 /**
  * generic_phy_init() - initialize the PHY port
  *

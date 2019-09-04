@@ -14,9 +14,6 @@ static const struct udevice_id nop_phy_ids[] = {
 	{ }
 };
 
-static struct phy_ops nop_phy_ops = {
-};
-
 U_BOOT_DRIVER(nop_phy) = {
 	.name	= "nop_phy",
 	.id	= UCLASS_PHY,
