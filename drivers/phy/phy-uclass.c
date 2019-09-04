@@ -8,9 +8,12 @@
 #include <dm.h>
 #include <generic-phy.h>
 
-static inline struct phy_ops *phy_dev_ops(struct udevice *dev)
+struct phy_ops nop_phy_ops = {
+};
+
+static inline struct phy_ops *phy_dev_ops(struct phy *phy)
 {
-	return (struct phy_ops *)dev->driver->ops;
+	return phy ? (struct phy_ops *)phy->dev->driver->ops : &nop_phy_ops;
 }
 
 static int generic_phy_xlate_offs_flags(struct phy *phy,
@@ -73,7 +76,7 @@ int generic_phy_get_by_index(struct udevice *dev, int index,
 
 	phy->dev = phydev;
 
-	ops = phy_dev_ops(phydev);
+	ops = phy_dev_ops(phy);
 
 	if (ops->of_xlate)
 		ret = ops->of_xlate(phy, &args);
@@ -108,35 +111,35 @@ int generic_phy_get_by_name(struct udevice *dev, const char *phy_name,
 
 int generic_phy_init(struct phy *phy)
 {
-	struct phy_ops const *ops = phy_dev_ops(phy->dev);
+	struct phy_ops const *ops = phy_dev_ops(phy);
 
 	return ops->init ? ops->init(phy) : 0;
 }
 
 int generic_phy_reset(struct phy *phy)
 {
-	struct phy_ops const *ops = phy_dev_ops(phy->dev);
+	struct phy_ops const *ops = phy_dev_ops(phy);
 
 	return ops->reset ? ops->reset(phy) : 0;
 }
 
 int generic_phy_exit(struct phy *phy)
 {
-	struct phy_ops const *ops = phy_dev_ops(phy->dev);
+	struct phy_ops const *ops = phy_dev_ops(phy);
 
 	return ops->exit ? ops->exit(phy) : 0;
 }
 
 int generic_phy_power_on(struct phy *phy)
 {
-	struct phy_ops const *ops = phy_dev_ops(phy->dev);
+	struct phy_ops const *ops = phy_dev_ops(phy);
 
 	return ops->power_on ? ops->power_on(phy) : 0;
 }
 
 int generic_phy_power_off(struct phy *phy)
 {
-	struct phy_ops const *ops = phy_dev_ops(phy->dev);
+	struct phy_ops const *ops = phy_dev_ops(phy);
 
 	return ops->power_off ? ops->power_off(phy) : 0;
 }
