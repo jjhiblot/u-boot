@@ -187,7 +187,19 @@
 };
 
 &usb0 {
-	maximum-speed = "high-speed";
 	dr_mode = "peripheral";
 	u-boot,dm-spl;
+};
+
+&wiz3_pll1_refclk {
+	assigned-clocks = <&wiz3_pll1_refclk>, <&wiz3_pll0_refclk>;
+	assigned-clock-parents = <&k3_clks 295 0>, <&k3_clks 295 9>;
+};
+
+&serdes_ln_ctrl {
+	u-boot,mux-autoprobe;
+};
+
+&usb_serdes_mux {
+	u-boot,mux-autoprobe;
 };
