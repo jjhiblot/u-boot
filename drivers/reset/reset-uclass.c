@@ -9,9 +9,12 @@
 #include <reset.h>
 #include <reset-uclass.h>
 
-static inline struct reset_ops *reset_dev_ops(struct udevice *dev)
+struct reset_ops nop_reset_ops = {
+};
+
+static inline struct reset_ops *reset_dev_ops(struct reset_ctl *r)
 {
-	return (struct reset_ops *)dev->driver->ops;
+	return r ? (struct reset_ops *)r->dev->driver->ops : &nop_reset_ops;
 }
 
 static int reset_of_xlate_default(struct reset_ctl *reset_ctl,
@@ -57,9 +60,10 @@ int reset_get_by_index(struct udevice *dev, int index,
 		debug("%s %d\n", ofnode_get_name(args.node), args.args[0]);
 		return ret;
 	}
-	ops = reset_dev_ops(dev_reset);
 
 	reset_ctl->dev = dev_reset;
+	ops = reset_dev_ops(reset_ctl);
+
 	if (ops->of_xlate)
 		ret = ops->of_xlate(reset_ctl, &args);
 	else
@@ -132,29 +136,29 @@ int reset_get_by_name(struct udevice *dev, const char *name,
 
 int reset_request(struct reset_ctl *reset_ctl)
 {
-	struct reset_ops *ops = reset_dev_ops(reset_ctl->dev);
+	struct reset_ops *ops = reset_dev_ops(reset_ctl);
 
 	debug("%s(reset_ctl=%p)\n", __func__, reset_ctl);
 
-	return ops->request(reset_ctl);
+	return ops->request ? ops->request(reset_ctl) : 0;
 }
 
 int reset_free(struct reset_ctl *reset_ctl)
 {
-	struct reset_ops *ops = reset_dev_ops(reset_ctl->dev);
+	struct reset_ops *ops = reset_dev_ops(reset_ctl);
 
 	debug("%s(reset_ctl=%p)\n", __func__, reset_ctl);
 
-	return ops->free(reset_ctl);
+	return ops->free ? ops->free(reset_ctl) : 0;
 }
 
 int reset_assert(struct reset_ctl *reset_ctl)
 {
-	struct reset_ops *ops = reset_dev_ops(reset_ctl->dev);
+	struct reset_ops *ops = reset_dev_ops(reset_ctl);
 
 	debug("%s(reset_ctl=%p)\n", __func__, reset_ctl);
 
-	return ops->rst_assert(reset_ctl);
+	return ops->rst_assert ? ops->rst_assert(reset_ctl) : 0;
 }
 
 int reset_assert_bulk(struct reset_ctl_bulk *bulk)
@@ -172,11 +176,11 @@ int reset_assert_bulk(struct reset_ctl_bulk *bulk)
 
 int reset_deassert(struct reset_ctl *reset_ctl)
 {
-	struct reset_ops *ops = reset_dev_ops(reset_ctl->dev);
+	struct reset_ops *ops = reset_dev_ops(reset_ctl);
 
 	debug("%s(reset_ctl=%p)\n", __func__, reset_ctl);
 
-	return ops->rst_deassert(reset_ctl);
+	return ops->rst_deassert ? ops->rst_deassert(reset_ctl) : 0;
 }
 
 int reset_deassert_bulk(struct reset_ctl_bulk *bulk)
@@ -194,11 +198,11 @@ int reset_deassert_bulk(struct reset_ctl_bulk *bulk)
 
 int reset_status(struct reset_ctl *reset_ctl)
 {
-	struct reset_ops *ops = reset_dev_ops(reset_ctl->dev);
+	struct reset_ops *ops = reset_dev_ops(reset_ctl);
 
 	debug("%s(reset_ctl=%p)\n", __func__, reset_ctl);
 
-	return ops->rst_status(reset_ctl);
+	return ops->rst_status ? ops->rst_status(reset_ctl) : 0;
 }
 
 int reset_release_all(struct reset_ctl *reset_ctl, int count)
