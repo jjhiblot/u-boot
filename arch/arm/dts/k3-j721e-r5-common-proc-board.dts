@@ -47,6 +47,13 @@
 		u-boot,dm-spl;
 	};
 
+	clk_19_2mhz: dummy_clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <19200000>;
+		u-boot,dm-spl;
+	};
+
 	memorycontroller: memorycontroller@02980000 {
 		compatible = "ti,j721e-ddrss";
 		reg = <0x0 0x02990000 0x0 0x4000>;
@@ -214,6 +221,12 @@
 		>;
 	};
 
+	main_usbss0_pins_default: main_usbss0_pins_default {
+		pinctrl-single,pins = <
+			J721E_IOPAD(0x290, PIN_OUTPUT, 0) /* (U6) USB0_DRVVBUS */
+			J721E_IOPAD(0x210, PIN_INPUT, 7) /* (W3) MCAN1_RX.GPIO1_3 */
+		>;
+	};
 };
 
 &wkup_uart0 {
@@ -461,6 +474,17 @@
 		compatible = "cypress,hyperflash", "cfi-flash";
 		reg = <0x0 0x0 0x4000000>;
 	};
+};
+
+&usbss0 {
+	/delete-property/ power-domains;
+	/delete-property/ assigned-clocks;
+	/delete-property/ assigned-clock-parents;
+	clocks = <&clk_19_2mhz>;
+	clock-names = "usb2_refclk";
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_usbss0_pins_default>;
+	ti,vbus-divider;
 };
 
 #include "k3-j721e-common-proc-board-u-boot.dtsi"

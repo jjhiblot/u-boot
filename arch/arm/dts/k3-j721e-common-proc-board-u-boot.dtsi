@@ -178,6 +178,16 @@
 	u-boot,dm-spl;
 };
 
+&main_usbss0_pins_default {
+	u-boot,dm-spl;
+};
+
 &usbss0 {
-	status = "disabled";
+	u-boot,dm-spl;
+};
+
+&usb0 {
+	maximum-speed = "high-speed";
+	dr_mode = "peripheral";
+	u-boot,dm-spl;
 };
