@@ -17,6 +17,10 @@
 #include <image.h>
 #include <malloc.h>
 #include <spi_flash.h>
+#include <g_dnl.h>
+#include <usb.h>
+#include <dfu.h>
+#include <environment.h>
 
 #include <asm/io.h>
 #include <asm/spl.h>
@@ -235,6 +239,27 @@ static void *get_sysfw_hf_addr(void)
 }
 #endif
 
+#if CONFIG_IS_ENABLED(DFU)
+static int get_sysfw_dfu(void *addr)
+{
+	char dfu_str[50];
+	int ret;
+
+	sprintf(dfu_str, "sysfw.itb ram 0x%p 0x%x", addr,
+		CONFIG_K3_SYSFW_IMAGE_SIZE_MAX);
+	ret = dfu_config_entities(dfu_str, "ram", "0");
+	if (ret) {
+		dfu_free_entities();
+		goto exit;
+	}
+
+	run_usb_dnl_gadget(0, "usb_dnl_dfu");
+exit:
+	dfu_free_entities();
+	return ret;
+}
+#endif
+
 void k3_sysfw_loader(void (*config_pm_done_callback)(void))
 {
 	void *addr;
@@ -297,6 +322,11 @@ void k3_sysfw_loader(void (*config_pm_done_callback)(void))
 		addr = get_sysfw_hf_addr();
 		if (!addr)
 			ret = -ENODEV;
+		break;
+#endif
+#if CONFIG_IS_ENABLED(DFU)
+	case BOOT_DEVICE_DFU:
+		ret = get_sysfw_dfu(addr);
 		break;
 #endif
 	default:
