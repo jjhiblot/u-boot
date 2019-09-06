@@ -4,14 +4,3 @@ config USB_CDNS3
 	help
 	  Say Y here if your system has a Cadence USB3 dual-role controller.
 	  It supports: Host-only.
-
-if USB_CDNS3
-
-config USB_CDNS3_TI
-	tristate "Cadence USB3 support on TI platforms"
-	default USB_CDNS3
-	help
-	  Say 'Y' here if you are building for Texas Instruments
-	  platforms that contain Cadence USB3 controller core, e.g. J721e.
-
-endif
