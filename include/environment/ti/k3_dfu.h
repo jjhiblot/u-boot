@@ -38,4 +38,9 @@
 	"sysfw.itb raw 0x6c0000 0x100000;" \
 	"rootfs raw 0x800000 0x3800000\0"
 
+#define DFU_ALT_INFO_RAM \
+	"dfu_alt_info_ram=" \
+	"tispl.bin ram 0x80080000 0x100000;" \
+	"u-boot.img ram 0x81000000 0x100000\0" \
+
 #endif /* __TI_DFU_H */
