@@ -12,7 +12,7 @@
 #include <linux/sizes.h>
 #include <config_distro_bootcmd.h>
 #include <environment/ti/mmc.h>
-#include <environment/ti/am65x_dfu.h>
+#include <environment/ti/k3_dfu.h>
 #include <environment/ti/k3_rproc.h>
 
 #define CONFIG_ENV_SIZE			(128 << 10)
