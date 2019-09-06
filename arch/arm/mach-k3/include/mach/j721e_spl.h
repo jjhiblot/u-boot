@@ -19,7 +19,7 @@
 /* With BootMode B = 1 */
 #define BOOT_DEVICE_MMC2		0x10
 #define BOOT_DEVICE_MMC1		0x11
-#define BOOT_DEVICE_USB			0x12
+#define BOOT_DEVICE_DFU			0x12
 #define BOOT_DEVICE_UFS			0x13
 #define BOOT_DEVIE_GPMC			0x14
 #define BOOT_DEVICE_PCIE		0x15
@@ -28,7 +28,7 @@
 
 /* Backup boot modes with MCU Only = 0 */
 #define BACKUP_BOOT_DEVICE_RAM		0x0
-#define BACKUP_BOOT_DEVICE_USB		0x1
+#define BACKUP_BOOT_DEVICE_DFU		0x1
 #define BACKUP_BOOT_DEVICE_UART		0x3
 #define BACKUP_BOOT_DEVICE_ETHERNET	0x4
 #define BACKUP_BOOT_DEVICE_MMC2		0x5

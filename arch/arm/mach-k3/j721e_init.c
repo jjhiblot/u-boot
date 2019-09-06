@@ -330,8 +330,8 @@ static u32 __get_backup_bootmedia(u32 main_devstat)
 			MAIN_DEVSTAT_BKUP_BOOTMODE_SHIFT;
 
 	switch (bkup_boot) {
-	case BACKUP_BOOT_DEVICE_USB:
-		return BOOT_DEVICE_USB;
+	case BACKUP_BOOT_DEVICE_DFU:
+		return BOOT_DEVICE_DFU;
 	case BACKUP_BOOT_DEVICE_UART:
 		return BOOT_DEVICE_UART;
 	case BACKUP_BOOT_DEVICE_ETHERNET:
