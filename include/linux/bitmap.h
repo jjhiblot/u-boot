@@ -177,4 +177,24 @@ again:
 	return index;
 }
 
+/*
+ * Find the first set bit in a memory region.
+ */
+static inline unsigned long find_first_bit(const unsigned long *addr, unsigned long size)
+{
+	unsigned long idx;
+
+	for (idx = 0; idx * BITS_PER_LONG < size; idx++) {
+		if (addr[idx])
+			return min(idx * BITS_PER_LONG + __ffs(addr[idx]), size);
+	}
+
+	return size;
+}
+
+#define for_each_set_bit(bit, addr, size) \
+	for ((bit) = find_first_bit((addr), (size));		\
+	     (bit) < (size);					\
+	     (bit) = find_next_bit((addr), (size), (bit) + 1))
+
 #endif /* __LINUX_BITMAP_H */
