@@ -391,24 +391,32 @@ int cdns3_bind(struct udevice *parent)
 	int ret;
 
 	node = fdt_node_offset_by_compatible(fdt, from, "cdns,usb3");
-	if (node < 0)
-		return -ENODEV;
+	if (node < 0) {
+		ret = -ENODEV;
+		goto fail;
+	}
 
 	name = fdt_get_name(fdt, node, NULL);
 	dr_mode = usb_get_dr_mode(node);
 
 	switch (dr_mode) {
+#if defined(CONFIG_SPL_USB_HOST_SUPPORT) || \
+	(!defined(CONFIG_SPL_BUILD) && defined(CONFIG_USB_HOST))
 	case USB_DR_MODE_HOST:
 		debug("%s: dr_mode: HOST\n", __func__);
 		driver = "cdns-usb3-host";
 		break;
+#endif
+#if CONFIG_IS_ENABLED(DM_USB_GADGET)
 	case USB_DR_MODE_PERIPHERAL:
 		debug("%s: dr_mode: PERIPHERAL\n", __func__);
 		driver = "cdns-usb3-peripheral";
 		break;
+#endif
 	default:
 		printf("%s: unsupported dr_mode\n", __func__);
-		return -ENODEV;
+		ret = -ENODEV;
+		goto fail;
 	};
 
 	ret = device_bind_driver_to_node(parent, driver, name,
@@ -416,9 +424,13 @@ int cdns3_bind(struct udevice *parent)
 	if (ret) {
 		printf("%s: not able to bind usb device mode\n",
 		       __func__);
-		return ret;
+		goto fail;
 	}
 
+	return 0;
+
+fail:
+	/* do not return an error: failing to bind would hang the board */
 	return 0;
 }
 
