@@ -347,6 +347,9 @@ static int cdns_sierra_phy_on(struct phy *gphy)
 	if (ret < 0)
 		dev_err(dev, "PLL lock of lane failed\n");
 
+	reset_control_assert(sp->phy_rst);
+	reset_control_deassert(sp->phy_rst);
+
 	return ret;
 }
 
