@@ -245,20 +245,22 @@ err:
 	return ret;
 }
 
-static const char *board_am65x_evm_get_fit_loadable(struct udevice *dev, int index,
-						    const char *type)
+static int board_am65x_evm_get_fit_loadable(struct udevice *dev, int index,
+					    const char *type, const char **strp)
 {
 	struct board_am65x_evm_priv *priv = dev_get_priv(dev);
 	const struct daughter_card_info *card;
 
-	if (strcmp(type, FIT_FDT_PROP))
-		return NULL;
 
-	card = detected_card(priv, index);
-	if (card)
-		return card->extcard_info->dtbo_name;
+	if (!strcmp(type, FIT_FDT_PROP)) {
+		card = detected_card(priv, index);
+		if (card) {
+			*strp = card->extcard_info->dtbo_name;
+			return 0;
+		}
+	}
 
-	return NULL;
+	return -ENOENT;
 }
 
 
