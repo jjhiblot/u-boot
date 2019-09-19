@@ -205,4 +205,6 @@ config MT76X8_USB_PHY
 
 	  This PHY is found on MT76x8 devices supporting USB.
 
+source "drivers/phy/cadence/Kconfig"
+
 endmenu
