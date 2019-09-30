@@ -11,6 +11,7 @@
 struct udevice;
 
 int sandbox_reset_query(struct udevice *dev, unsigned long id);
+int sandbox_reset_is_requested(struct udevice *dev, unsigned long id);
 
 int sandbox_reset_test_get(struct udevice *dev);
 int sandbox_reset_test_get_bulk(struct udevice *dev);
