@@ -38,18 +38,18 @@ static inline void unmap_sysmem(const void *vaddr)
 /* Map from a pointer to our RAM buffer */
 phys_addr_t map_to_sysmem(const void *ptr);
 
-/* Define nops for sandbox I/O access */
-#define readb(addr) ((void)addr, 0)
-#define readw(addr) ((void)addr, 0)
-#define readl(addr) ((void)addr, 0)
+#define readb(addr) (*(volatile u8 *)(uintptr_t)(addr))
+#define readw(addr) (*(volatile u16 *)(uintptr_t)(addr))
+#define readl(addr) (*(volatile u32 *)(uintptr_t)(addr))
 #ifdef CONFIG_SANDBOX64
-#define readq(addr) ((void)addr, 0)
+#define readq(addr) (*(volatile u64 *)(uintptr_t)(addr))
 #endif
-#define writeb(v, addr) ((void)addr)
-#define writew(v, addr) ((void)addr)
-#define writel(v, addr) ((void)addr)
+
+#define writeb(b, addr) (*(volatile u8 *)(addr) = (b))
+#define writew(b, addr) (*(volatile u16 *)(addr) = (b))
+#define writel(b, addr) (*(volatile u32 *)(addr) = (b))
 #ifdef CONFIG_SANDBOX64
-#define writeq(v, addr) ((void)addr)
+#define writeq(b, addr) (*(volatile u64 *)(addr) = (b))
 #endif
 
 /*
