@@ -73,14 +73,37 @@ struct regmap_range {
 	ulong size;
 };
 
+struct regmap_bus;
+/**
+ * struct regmap_config - a way of accessing hardware/bus registers
+ *
+ * @reg_read:	  Optional callback that if filled will be used to perform
+ *		  all the reads from the registers. Should only be provided for
+ *		  devices whose read operation cannot be represented as a simple
+ *		  read operation on a bus such as SPI, I2C, etc. Most of the
+ *		  devices do not need this.
+ * @reg_write:	  Same as above for writing.
+ */
+struct regmap_config {
+	int (*reg_read)(void *context, unsigned int reg, unsigned int *val);
+	int (*reg_write)(void *context, unsigned int reg, unsigned int val);
+};
+
 /**
  * struct regmap - a way of accessing hardware/bus registers
  *
  * @range_count:	Number of ranges available within the map
  * @ranges:		Array of ranges
+ * @bus_context:	Data passed to bus-specific callbacks
+ * @reg_read:		Optional callback that if filled will be used to perform
+ *			all the reads from the registers.
+ * @reg_write:		Same as above for writing.
  */
 struct regmap {
 	enum regmap_endianness_t endianness;
+	void *bus_context;
+	int (*reg_read)(void *context, unsigned int reg, unsigned int *val);
+	int (*reg_write)(void *context, unsigned int reg, unsigned int val);
 	int range_count;
 	struct regmap_range ranges[0];
 };
@@ -290,6 +313,43 @@ int regmap_raw_read_range(struct regmap *map, uint range_num, uint offset,
 				      timeout_ms, 0) \
 
 /**
+ * regmap_field_read_poll_timeout - Poll until a condition is met or a timeout
+ *				    occurs
+ *
+ * @field:	Regmap field to read from
+ * @val:	Unsigned integer variable to read the value into
+ * @cond:	Break condition (usually involving @val)
+ * @sleep_us:	Maximum time to sleep between reads in us (0 tight-loops).
+ * @timeout_ms:	Timeout in ms, 0 means never timeout
+ *
+ * Returns 0 on success and -ETIMEDOUT upon a timeout or the regmap_field_read
+ * error return value in case of a error read. In the two former cases,
+ * the last read value at @addr is stored in @val.
+ *
+ * This is modelled after the regmap_read_poll_timeout macros in linux but
+ * with millisecond timeout.
+ */
+#define regmap_field_read_poll_timeout(field, val, cond, sleep_us, timeout_ms) \
+({ \
+	unsigned long __start = get_timer(0); \
+	int __ret; \
+	for (;;) { \
+		__ret = regmap_field_read((field), &(val)); \
+		if (__ret) \
+			break; \
+		if (cond) \
+			break; \
+		if ((timeout_ms) && get_timer(__start) > (timeout_ms)) { \
+			__ret = regmap_field_read((field), &(val)); \
+			break; \
+		} \
+		if ((sleep_us)) \
+			udelay((sleep_us)); \
+	} \
+	__ret ?: ((cond) ? 0 : -ETIMEDOUT); \
+})
+
+/**
  * regmap_update_bits() - Perform a read/modify/write using a mask
  *
  * @map:	The map returned by regmap_init_mem*()
@@ -333,6 +393,22 @@ int regmap_init_mem_platdata(struct udevice *dev, fdt_val_t *reg, int count,
 int regmap_init_mem_index(ofnode node, struct regmap **mapp, int index);
 
 /**
+ * devm_regmap_init() - Initialise register map (device managed)
+ *
+ * @dev: Device that will be interacted with
+ * @bus: Bus-specific callbacks to use with device (IGNORED)
+ * @bus_context: Data passed to bus-specific callbacks
+ * @config: Configuration for register map
+ *
+ * The return value will be an ERR_PTR() on error or a valid pointer to
+ * a struct regmap.
+ * The structure is automatically freed when the device is unbound
+ */
+struct regmap *devm_regmap_init(struct udevice *dev,
+				const struct regmap_bus *bus,
+				void *bus_context,
+				const struct regmap_config *config);
+/**
  * regmap_get_range() - Obtain the base memory address of a regmap range
  *
  * @map:	Regmap to query
@@ -348,5 +424,76 @@ void *regmap_get_range(struct regmap *map, unsigned int range_num);
  * Return: 0 if OK, -ve on error
  */
 int regmap_uninit(struct regmap *map);
+
+/**
+ * struct reg_field - Description of an register field
+ *
+ * @reg: Offset of the register within the regmap bank
+ * @lsb: lsb of the register field.
+ * @msb: msb of the register field.
+ * @id_size: port size if it has some ports
+ * @id_offset: address offset for each ports
+ */
+struct reg_field {
+	unsigned int reg;
+	unsigned int lsb;
+	unsigned int msb;
+};
+
+struct regmap_field;
+
+#define REG_FIELD(_reg, _lsb, _msb) {		\
+				.reg = _reg,	\
+				.lsb = _lsb,	\
+				.msb = _msb,	\
+				}
+
+/**
+ * devm_regmap_field_alloc() - Allocate and initialise a register field.
+ *
+ * @dev: Device that will be interacted with
+ * @regmap: regmap bank in which this register field is located.
+ * @reg_field: Register field with in the bank.
+ *
+ * The return value will be an ERR_PTR() on error or a valid pointer
+ * to a struct regmap_field. The regmap_field will be automatically freed
+ * by the device management code.
+ */
+struct regmap_field *devm_regmap_field_alloc(struct udevice *dev,
+					     struct regmap *regmap,
+					     struct reg_field reg_field);
+/**
+ * devm_regmap_field_free() - Free a register field allocated using
+ *                            devm_regmap_field_alloc.
+ *
+ * @dev: Device that will be interacted with
+ * @field: regmap field which should be freed.
+ *
+ * Free register field allocated using devm_regmap_field_alloc(). Usually
+ * drivers need not call this function, as the memory allocated via devm
+ * will be freed as per device-driver life-cyle.
+ */
+void devm_regmap_field_free(struct udevice *dev, struct regmap_field *field);
+
+/**
+ * regmap_field_write() - Write a value to a regmap field
+ *
+ * @field:	Regmap field to write to
+ * @val:	Data to write to the regmap at the specified offset
+ *
+ * Return: 0 if OK, -ve on error
+ */
+int regmap_field_write(struct regmap_field *field, unsigned int val);
+
+/**
+ * regmap_read() - Read a 32-bit value from a regmap
+ *
+ * @field:	Regmap field to write to
+ * @valp:	Pointer to the buffer to receive the data read from the regmap
+ *		field
+ *
+ * Return: 0 if OK, -ve on error
+ */
+int regmap_field_read(struct regmap_field *field, unsigned int *val);
 
 #endif

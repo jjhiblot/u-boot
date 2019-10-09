@@ -15,6 +15,14 @@
 #include <dm/of_addr.h>
 #include <linux/ioport.h>
 
+struct regmap_field {
+	struct regmap *regmap;
+	unsigned int mask;
+	/* lsb */
+	unsigned int shift;
+	unsigned int reg;
+};
+
 DECLARE_GLOBAL_DATA_PTR;
 
 /**
@@ -31,6 +39,9 @@ static struct regmap *regmap_alloc(int count)
 	if (!map)
 		return NULL;
 	map->range_count = count;
+	map->bus_context = NULL;
+	map->reg_read = NULL;
+	map->reg_write = NULL;
 
 	return map;
 }
@@ -219,6 +230,35 @@ int regmap_init_mem(ofnode node, struct regmap **mapp)
 
 	return 0;
 }
+
+static void devm_regmap_release(struct udevice *dev, void *res)
+{
+	regmap_uninit(*(struct regmap **)res);
+}
+
+struct regmap *devm_regmap_init(struct udevice *dev,
+				const struct regmap_bus *bus,
+				void *bus_context,
+				const struct regmap_config *config)
+{
+	int rc;
+	struct regmap **mapp;
+
+	mapp = devres_alloc(devm_regmap_release, sizeof(struct regmap *),
+			    __GFP_ZERO);
+	if (unlikely(!mapp))
+		return ERR_PTR(-ENOMEM);
+
+	rc = regmap_init_mem(dev_ofnode(dev), mapp);
+	if (rc)
+		return ERR_PTR(rc);
+	(*mapp)->reg_read = config->reg_read;
+	(*mapp)->reg_write = config->reg_write;
+	(*mapp)->bus_context = bus_context;
+
+	devres_add(dev, mapp);
+	return *mapp;
+}
 #endif
 
 void *regmap_get_range(struct regmap *map, unsigned int range_num)
@@ -293,6 +333,9 @@ int regmap_raw_read_range(struct regmap *map, uint range_num, uint offset,
 {
 	struct regmap_range *range;
 	void *ptr;
+
+	if (map->reg_read)
+		return map->reg_read(map->bus_context, offset, valp);
 
 	if (range_num >= map->range_count) {
 		debug("%s: range index %d larger than range count\n",
@@ -403,6 +446,9 @@ int regmap_raw_write_range(struct regmap *map, uint range_num, uint offset,
 	struct regmap_range *range;
 	void *ptr;
 
+	if (map->reg_write)
+		return map->reg_write(map->bus_context, offset,
+				      *(unsigned int *)val);
 	if (range_num >= map->range_count) {
 		debug("%s: range index %d larger than range count\n",
 		      __func__, range_num);
@@ -462,5 +508,74 @@ int regmap_update_bits(struct regmap *map, uint offset, uint mask, uint val)
 
 	reg &= ~mask;
 
-	return regmap_write(map, offset, reg | val);
+	return regmap_write(map, offset, reg | (val & mask));
+}
+
+int regmap_field_read(struct regmap_field *field, unsigned int *val)
+{
+	int ret;
+	unsigned int reg_val;
+
+	ret = regmap_read(field->regmap, field->reg, &reg_val);
+	if (ret != 0)
+		return ret;
+
+	reg_val &= field->mask;
+	reg_val >>= field->shift;
+	*val = reg_val;
+
+	return ret;
+}
+
+int regmap_field_write(struct regmap_field *field, unsigned int val)
+{
+	return regmap_update_bits(field->regmap, field->reg, field->mask,
+				  val << field->shift);
+}
+
+static void regmap_field_init(struct regmap_field *rm_field,
+			      struct regmap *regmap,
+			      struct reg_field reg_field)
+{
+	rm_field->regmap = regmap;
+	rm_field->reg = reg_field.reg;
+	rm_field->shift = reg_field.lsb;
+	rm_field->mask = GENMASK(reg_field.msb, reg_field.lsb);
+}
+
+struct regmap_field *devm_regmap_field_alloc(struct udevice *dev,
+					     struct regmap *regmap,
+					     struct reg_field reg_field)
+{
+	struct regmap_field *rm_field = devm_kzalloc(dev, sizeof(*rm_field),
+						     GFP_KERNEL);
+	if (!rm_field)
+		return ERR_PTR(-ENOMEM);
+
+	regmap_field_init(rm_field, regmap, reg_field);
+
+	return rm_field;
+}
+
+void devm_regmap_field_free(struct udevice *dev, struct regmap_field *field)
+{
+	devm_kfree(dev, field);
+}
+
+struct regmap_field *regmap_field_alloc(struct regmap *regmap,
+					struct reg_field reg_field)
+{
+	struct regmap_field *rm_field = kzalloc(sizeof(*rm_field), GFP_KERNEL);
+
+	if (!rm_field)
+		return ERR_PTR(-ENOMEM);
+
+	regmap_field_init(rm_field, regmap, reg_field);
+
+	return rm_field;
+}
+
+void regmap_field_free(struct regmap_field *field)
+{
+	kfree(field);
 }
