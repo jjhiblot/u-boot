@@ -8,6 +8,10 @@
 		stdout-path = "serial2:115200n8";
 		tick-timer = &timer1;
 	};
+	board {
+		compatible = "ti,j721e-evm";
+		u-boot,dm-spl;
+	};
 };
 
 &cbass_main{
