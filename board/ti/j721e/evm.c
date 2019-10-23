@@ -8,9 +8,11 @@
  */
 
 #include <common.h>
+#include <board.h>
 #include <asm/io.h>
 #include <spl.h>
 #include <asm/arch/sys_proto.h>
+#include "../../../drivers/board/ti/ti-board.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -80,3 +82,24 @@ int ft_board_setup(void *blob, bd_t *bd)
 	return ret;
 }
 #endif
+
+int board_late_init(void)
+{
+	struct udevice *board;
+	int ret;
+
+	ret = board_get(&board);
+	if (ret) {
+		pr_warn("Cannot find board device\n");
+		goto end;
+	}
+
+	ret = board_detect(board);
+	if (ret) {
+		pr_warn("Board detection failed\n");
+		goto end;
+	}
+
+end:
+	return 0;
+}
